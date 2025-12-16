@@ -1,4 +1,3 @@
-# Z-Anatomy-Sample
-Basic sample. It only contains the models, materials and shaders. It does not contain any functionality.
-
-CC-BY-SA 4.0
+# Z-Anatomy
+This Repo contains the models, materials and shaders from Z-Anatomy. It does not contain any functionality.
+It is mend to be used by as package or submodule for VIRTOSHA.
