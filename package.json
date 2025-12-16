@@ -1,0 +1,19 @@
+{
+  "displayName": "VIRTOSHA Project - Z-Anatomy Data",
+  "name": "co.mindport.vrbuilder.virtosha.zanatomy",
+  "version": "1.0.0",
+  "unity": "2021.1",
+  "description": "This Repo contains the models, materials and shaders from Z-Anatomy. It does not contain any functionality. It is mend to be used by as package or submodule for VIRTOSHA.",
+  "dependencies": {},
+  "keywords": [
+    "mindport",
+    "unity",
+    "medical",
+    "anatomy"
+  ],
+  "author": {
+    "name": "MindPort",
+    "email": "contact@mindport.co",
+    "url": "https://mindport.co/"
+  }
+}
