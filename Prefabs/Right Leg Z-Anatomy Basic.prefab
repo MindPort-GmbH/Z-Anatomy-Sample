@@ -1,0 +1,150 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &7039240669821887563
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 321917323436879200, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.041244954
+      objectReference: {fileID: 0}
+    - target: {fileID: 321917323436879200, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.6599643
+      objectReference: {fileID: 0}
+    - target: {fileID: 321917323436879200, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -0.41620234
+      objectReference: {fileID: 0}
+    - target: {fileID: 321917323436879200, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.5356061
+      objectReference: {fileID: 0}
+    - target: {fileID: 321917323436879200, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.44879824
+      objectReference: {fileID: 0}
+    - target: {fileID: 321917323436879200, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0.34621945
+      objectReference: {fileID: 0}
+    - target: {fileID: 321917323436879200, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0.62596995
+      objectReference: {fileID: 0}
+    - target: {fileID: 533646889834803424, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_TagString
+      value: PatientSkin
+      objectReference: {fileID: 0}
+    - target: {fileID: 1115298874266318583, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_TagString
+      value: PatientSkin
+      objectReference: {fileID: 0}
+    - target: {fileID: 1484324427442492194, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_Name
+      value: Right Leg Z-Anatomy Variant
+      objectReference: {fileID: 0}
+    - target: {fileID: 1484324427442492194, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660835355270043781, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_TagString
+      value: PatientSkin
+      objectReference: {fileID: 0}
+    - target: {fileID: 3431579675151451717, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_Name
+      value: 'Final Operation Result Right [placeholder]'
+      objectReference: {fileID: 0}
+    - target: {fileID: 4048325667013472922, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5108321182464212888, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.30378234
+      objectReference: {fileID: 0}
+    - target: {fileID: 5108321182464212888, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.8707677
+      objectReference: {fileID: 0}
+    - target: {fileID: 5108321182464212888, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.36396438
+      objectReference: {fileID: 0}
+    - target: {fileID: 5108321182464212888, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.6089066
+      objectReference: {fileID: 0}
+    - target: {fileID: 5108321182464212888, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0.30876544
+      objectReference: {fileID: 0}
+    - target: {fileID: 5108321182464212888, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.25572807
+      objectReference: {fileID: 0}
+    - target: {fileID: 5108321182464212888, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0.6844705
+      objectReference: {fileID: 0}
+    - target: {fileID: 5108321182464212888, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 24.361
+      objectReference: {fileID: 0}
+    - target: {fileID: 5108321182464212888, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -1.974
+      objectReference: {fileID: 0}
+    - target: {fileID: 5108321182464212888, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: -13.008
+      objectReference: {fileID: 0}
+    - target: {fileID: 6827479478190797975, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_TagString
+      value: PatientSkin
+      objectReference: {fileID: 0}
+    - target: {fileID: 9164145454892274332, guid: dff3c7135beb650459ad6916a4512ba9,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects:
+    - {fileID: 8850491907269716525, guid: dff3c7135beb650459ad6916a4512ba9, type: 3}
+    - {fileID: 5491270462242210577, guid: dff3c7135beb650459ad6916a4512ba9, type: 3}
+    - {fileID: 6734010714231078961, guid: dff3c7135beb650459ad6916a4512ba9, type: 3}
+    - {fileID: 7329603454894571193, guid: dff3c7135beb650459ad6916a4512ba9, type: 3}
+    - {fileID: 3684704487391445012, guid: dff3c7135beb650459ad6916a4512ba9, type: 3}
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: dff3c7135beb650459ad6916a4512ba9, type: 3}
