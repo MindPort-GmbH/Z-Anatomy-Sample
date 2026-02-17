@@ -8,13 +8,12 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Skin 1
-  m_Shader: {fileID: -6465566751694194690, guid: 54db3774a15e4dfe8e228fcf31d9c468,
+  m_Shader: {fileID: -6465566751694194690, guid: 01f6fc5b6f43a2c428e1ef1bf94d6676,
     type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords:
-  - _CLIPPING_PLANE
+  m_InvalidKeywords: []
   m_LightmapFlags: 2
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -157,7 +156,7 @@ Material:
     - _OcclusionStrength: 1
     - _OpaqueCullMode: 2
     - _Parallax: 0.02
-    - _PlaneEnabled: 1
+    - _PlaneEnabled: 0
     - _QueueControl: 0
     - _QueueOffset: 0
     - _RayTracing: 0
