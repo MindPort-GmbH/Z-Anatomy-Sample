@@ -1,31 +1,69 @@
+using System;
 using System.Collections.Generic;
 using EasyButtons;
+using Microsoft.MixedReality.GraphicsTools;
 using UnityEngine;
 
 namespace VIRTOSHA.ZAnatomy
 {
     /// <summary>
-    /// Records wedge clip stamps from trigger intersections and applies them persistently to touched targets.
+    /// Records clip stamps from trigger intersections and applies them persistently to touched targets.
     /// Clipping remains active until <see cref="ResetClipping"/> is called.
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("VIRTOSHA/Z-Anatomy/Stamp Cut")]
     public class StampCut : MonoBehaviour
     {
+        /// <summary>
+        /// Maximum retained stamps. Hard-limited by shader setting.
+        /// </summary>
         private const int MaxShaderStamps = 64;
-        private const string StampEnabledProperty = "_StampCutEnabled";
-        private const string StampCountProperty = "_WedgeStampCount";
-        private const string StampInverseProperty = "_WedgeStampInverse";
+        private const string StampEnabledProperty = "_StampClipEnabled";
+        private const string StampCountProperty = "_SphereStampCount";
+        private const string StampWorldToLocalProperty = "_SphereStampWorldToLocal";
 
         [Header("Target Filtering")]
         [SerializeField, Tooltip("Physics layers that can be stamped when intersecting the cutter volume.")]
         private LayerMask targetLayers = ~0;
 
-        [SerializeField, Tooltip("Only materials whose shader name exactly matches this value are affected. Leave empty to allow any shader.")]
-        private string requiredShaderName = "Shader Graphs/BaseShaderStampCut";
+        [Header("Renders to Clip")]
+        [SerializeField, Tooltip("Toggles whether clipping will apply to shared materials or material instances (default) on renderers within the renderers list. This cannot be altered when renderers are already specified.")]
+        private bool applyToSharedMaterial;
+
+        /// <summary>
+        /// Toggles whether clipping will apply to shared materials or material instances (default) on renderers within the renderers list.
+        /// This cannot be altered when renderers are already specified.
+        /// </summary>
+        /// <remarks>
+        /// Applying to shared materials will allow for GPU instancing to batch calls between Renderers
+        /// that interact with the same clipping primitives.
+        /// </remarks>
+        public bool ApplyToSharedMaterial
+        {
+            get => applyToSharedMaterial;
+            set
+            {
+                if (value != applyToSharedMaterial)
+                {
+                    if (renderers.Count > 0)
+                    {
+                        throw new InvalidOperationException("Cannot change material applied to after renderers have been added.");
+                    }
+
+                    applyToSharedMaterial = value;
+                }
+            }
+        }
+
+        [SerializeField, Tooltip("The renderer(s) that should be affected by the cutter.")]
+        protected List<Renderer> renderers = new List<Renderer>();
+
+        [Header("Materials to Clip")]
+        [SerializeField, Tooltip("The material(s) that should be affected by the cutter. Materials on renderers within the renderers list do not need to be added to this list.")]
+        protected List<Material> materials = new List<Material>();
 
         [Header("Stamping")]
-        [SerializeField, Range(1, MaxShaderStamps), Tooltip("Maximum retained wedge stamps. Hard-limited by shader support.")]
+        [SerializeField, Range(1, MaxShaderStamps), Tooltip("Maximum retained stamps. Hard-limited by shader setting.")]
         private int maxStamps = MaxShaderStamps;
 
         [SerializeField, Min(0.0f), Tooltip("Minimum position delta required before adding another stamp from motion.")]
@@ -44,30 +82,30 @@ namespace VIRTOSHA.ZAnatomy
         [SerializeField, Tooltip("Adds verbose trigger-level logs for overlap filtering and registration.")]
         private bool debugTriggerLogs;
 
-        [Header("Observed Targets")]
         [SerializeField, Tooltip("Renderers that have been registered as stamp targets in this session.")]
-        private List<Renderer> affectedRenderers = new List<Renderer>();
+        private List<Renderer> observedRenderers = new List<Renderer>();
 
         [SerializeField, Tooltip("Materials currently tracked for receiving stamp state updates.")]
-        private List<Material> affectedMaterials = new List<Material>();
+        private List<Material> observedMaterials = new List<Material>();
 
-        [SerializeField, Tooltip("Current number of stored wedge stamps applied to the shader.")]
+        [SerializeField, Tooltip("Current number of stored stamps applied to the shader.")]
         private int currentStampCount;
 
-        private readonly HashSet<Renderer> affectedRendererSet = new HashSet<Renderer>();
-        private readonly HashSet<Material> affectedMaterialSet = new HashSet<Material>();
-        private readonly List<Matrix4x4> wedgeStampInverses = new List<Matrix4x4>();
-        private readonly Matrix4x4[] wedgeStampInverseBuffer = new Matrix4x4[MaxShaderStamps];
+        private readonly HashSet<Renderer> observedRendererSet = new HashSet<Renderer>();
+        private readonly HashSet<Material> observedMaterialSet = new HashSet<Material>();
+        private readonly HashSet<Renderer> instanceMaterialOwners = new HashSet<Renderer>();
+        private readonly List<Matrix4x4> sphereStampWorldToLocalMatrices = new List<Matrix4x4>();
+        private readonly Matrix4x4[] sphereStampWorldToLocalBuffer = new Matrix4x4[MaxShaderStamps];
 
         private MaterialPropertyBlock materialPropertyBlock;
         private int stampEnabledID;
         private int stampCountID;
-        private int stampInverseID;
+        private int stampWorldToLocalID;
         private bool hasLastStampPose;
         private Vector3 lastStampPosition;
         private Quaternion lastStampRotation;
 
-        public IReadOnlyList<Material> AffectedMaterials => affectedMaterials;
+        public IReadOnlyList<Material> AffectedMaterials => observedMaterials;
 
         private void Awake()
         {
@@ -78,6 +116,7 @@ namespace VIRTOSHA.ZAnatomy
         {
             EnsureInitialized();
             RebuildSetsFromLists();
+            ValidateCutterColliderConfiguration();
             PushStampStateToTargets();
         }
 
@@ -106,17 +145,39 @@ namespace VIRTOSHA.ZAnatomy
             }
         }
 
-        [Button]
+        private void FixedUpdate()
+        {
+            if (!stampOnTriggerStay)
+            {
+                return;
+            }
+
+            Collider cutterCollider = GetComponent<Collider>();
+            if (cutterCollider == null || cutterCollider.isTrigger)
+            {
+                return;
+            }
+
+            int registeredCount;
+            CollectCurrentIntersections(logDetails: false, out registeredCount);
+
+            if (registeredCount > 0 && ShouldCaptureStampPose())
+            {
+                CaptureStampFromCurrentPose(force: true);
+            }
+        }
+
         public void StampNow()
         {
             EnsureInitialized();
-            int beforeRendererCount = affectedRenderers.Count;
-            int beforeMaterialCount = affectedMaterials.Count;
-            int overlapCount = CollectCurrentIntersections(logDetails: true);
+            int beforeRendererCount = observedRenderers.Count;
+            int beforeMaterialCount = observedMaterials.Count;
+            int registeredCount;
+            int overlapCount = CollectCurrentIntersections(logDetails: true, out registeredCount);
 
             LogDebug(
-                $"StampNow: overlaps={overlapCount}, newRenderers={affectedRenderers.Count - beforeRendererCount}, " +
-                $"newMaterials={affectedMaterials.Count - beforeMaterialCount}, existingStamps={currentStampCount}.");
+                $"StampNow: overlaps={overlapCount}, registered={registeredCount}, newRenderers={observedRenderers.Count - beforeRendererCount}, " +
+                $"newMaterials={observedMaterials.Count - beforeMaterialCount}, existingStamps={currentStampCount}.");
 
             CaptureStampFromCurrentPose(force: true);
 
@@ -126,21 +187,22 @@ namespace VIRTOSHA.ZAnatomy
         [Button]
         public void ResetClipping()
         {
-            wedgeStampInverses.Clear();
+            sphereStampWorldToLocalMatrices.Clear();
             currentStampCount = 0;
             hasLastStampPose = false;
             PushStampStateToTargets();
-            LogDebug("ResetClipping: cleared all stored wedge stamps.");
+            LogDebug("ResetClipping: cleared all stored sphere stamps.");
         }
 
         [Button]
         public void ClearAffectedTargets()
         {
             ResetClipping();
-            affectedRendererSet.Clear();
-            affectedMaterialSet.Clear();
-            affectedRenderers.Clear();
-            affectedMaterials.Clear();
+            ReleaseAllRendererMaterialOwnership();
+            observedRendererSet.Clear();
+            observedMaterialSet.Clear();
+            observedRenderers.Clear();
+            observedMaterials.Clear();
             LogDebug("ClearAffectedTargets: cleared tracked renderers and materials.");
         }
 
@@ -157,30 +219,18 @@ namespace VIRTOSHA.ZAnatomy
             }
         }
 
-        private int CollectCurrentIntersections(bool logDetails)
+        private int CollectCurrentIntersections(bool logDetails, out int registeredCount)
         {
-            BoxCollider box = GetComponent<BoxCollider>();
-            if (box == null)
+            Collider cutterCollider = GetComponent<Collider>();
+            if (cutterCollider == null)
             {
-                LogDebugWarning("CollectCurrentIntersections: missing BoxCollider on StampCut.");
+                LogDebugWarning("CollectCurrentIntersections: missing Collider on StampCut.");
+                registeredCount = 0;
                 return 0;
             }
 
-            Vector3 center = transform.TransformPoint(box.center);
-            Vector3 lossyScale = transform.lossyScale;
-            Vector3 halfExtents = new Vector3(
-                Mathf.Abs(lossyScale.x) * box.size.x * 0.5f,
-                Mathf.Abs(lossyScale.y) * box.size.y * 0.5f,
-                Mathf.Abs(lossyScale.z) * box.size.z * 0.5f);
-
-            Collider[] overlaps = Physics.OverlapBox(
-                center,
-                halfExtents,
-                transform.rotation,
-                targetLayers.value,
-                QueryTriggerInteraction.Collide);
-
-            int registeredCount = 0;
+            Collider[] overlaps = CollectOverlapsForCollider(cutterCollider);
+            registeredCount = 0;
             for (int i = 0; i < overlaps.Length; i++)
             {
                 if (TryRegisterColliderAsTarget(overlaps[i], logDetails))
@@ -193,10 +243,89 @@ namespace VIRTOSHA.ZAnatomy
             {
                 LogDebug(
                     $"CollectCurrentIntersections: overlaps={overlaps.Length}, registered={registeredCount}, " +
-                    $"trackedRenderers={affectedRenderers.Count}, trackedMaterials={affectedMaterials.Count}.");
+                    $"trackedRenderers={observedRenderers.Count}, trackedMaterials={observedMaterials.Count}.");
             }
 
             return overlaps.Length;
+        }
+
+        private Collider[] CollectOverlapsForCollider(Collider cutterCollider)
+        {
+            if (cutterCollider is BoxCollider box)
+            {
+                Vector3 center = transform.TransformPoint(box.center);
+                Vector3 lossyScale = transform.lossyScale;
+                Vector3 boxHalfExtents = new Vector3(
+                    Mathf.Abs(lossyScale.x) * box.size.x * 0.5f,
+                    Mathf.Abs(lossyScale.y) * box.size.y * 0.5f,
+                    Mathf.Abs(lossyScale.z) * box.size.z * 0.5f);
+
+                return Physics.OverlapBox(
+                    center,
+                    boxHalfExtents,
+                    transform.rotation,
+                    targetLayers.value,
+                    QueryTriggerInteraction.Collide);
+            }
+
+            if (cutterCollider is SphereCollider sphere)
+            {
+                Vector3 center = transform.TransformPoint(sphere.center);
+                Vector3 lossyScale = transform.lossyScale;
+                float maxScale = Mathf.Max(Mathf.Abs(lossyScale.x), Mathf.Abs(lossyScale.y), Mathf.Abs(lossyScale.z));
+                float radius = sphere.radius * maxScale;
+
+                return Physics.OverlapSphere(
+                    center,
+                    radius,
+                    targetLayers.value,
+                    QueryTriggerInteraction.Collide);
+            }
+
+            if (cutterCollider is CapsuleCollider capsule)
+            {
+                Vector3 lossyScale = transform.lossyScale;
+                Vector3 center = transform.TransformPoint(capsule.center);
+                Vector3 axisLocal = capsule.direction == 0 ? Vector3.right : capsule.direction == 1 ? Vector3.up : Vector3.forward;
+                Vector3 axisWorld = transform.rotation * axisLocal;
+
+                float radiusScale = capsule.direction == 0
+                    ? Mathf.Max(Mathf.Abs(lossyScale.y), Mathf.Abs(lossyScale.z))
+                    : capsule.direction == 1
+                        ? Mathf.Max(Mathf.Abs(lossyScale.x), Mathf.Abs(lossyScale.z))
+                        : Mathf.Max(Mathf.Abs(lossyScale.x), Mathf.Abs(lossyScale.y));
+                float axisScale = capsule.direction == 0
+                    ? Mathf.Abs(lossyScale.x)
+                    : capsule.direction == 1
+                        ? Mathf.Abs(lossyScale.y)
+                        : Mathf.Abs(lossyScale.z);
+
+                float radius = capsule.radius * radiusScale;
+                float halfHeight = Mathf.Max(0.0f, (capsule.height * axisScale * 0.5f) - radius);
+                Vector3 pointA = center + axisWorld * halfHeight;
+                Vector3 pointB = center - axisWorld * halfHeight;
+
+                return Physics.OverlapCapsule(
+                    pointA,
+                    pointB,
+                    radius,
+                    targetLayers.value,
+                    QueryTriggerInteraction.Collide);
+            }
+
+            Bounds bounds = cutterCollider.bounds;
+            Vector3 boundsHalfExtents = bounds.extents;
+            if (boundsHalfExtents.sqrMagnitude <= Mathf.Epsilon)
+            {
+                return System.Array.Empty<Collider>();
+            }
+
+            return Physics.OverlapBox(
+                bounds.center,
+                boundsHalfExtents,
+                Quaternion.identity,
+                targetLayers.value,
+                QueryTriggerInteraction.Collide);
         }
 
         private bool TryRegisterColliderAsTarget(Collider other, bool logDetails)
@@ -232,6 +361,16 @@ namespace VIRTOSHA.ZAnatomy
                 return false;
             }
 
+            if (renderers.Count == 0 && materials.Count == 0)
+            {
+                if (logDetails)
+                {
+                    LogDebug($"Skipped collider '{other.name}': both renderer and material allowlists are empty.");
+                }
+
+                return false;
+            }
+
             Renderer targetRenderer = other.GetComponentInParent<Renderer>();
             if (targetRenderer == null)
             {
@@ -243,82 +382,173 @@ namespace VIRTOSHA.ZAnatomy
                 return false;
             }
 
-            return RegisterAffectedRenderer(targetRenderer, logDetails);
+            return RegisterObservedTargets(targetRenderer, logDetails);
         }
 
-        private bool RegisterAffectedRenderer(Renderer renderer, bool logDetails)
+        private bool RegisterObservedTargets(Renderer renderer, bool logDetails)
         {
             if (renderer == null)
             {
                 return false;
             }
 
-            Material[] sharedMaterials = renderer.sharedMaterials;
-            bool hasSupportedMaterial = false;
+            bool rendererIsListed = renderers.Contains(renderer);
+            Material[] sharedRendererMaterials = renderer.sharedMaterials;
+            List<Material> matchedConfiguredMaterials = null;
 
-            for (int i = 0; i < sharedMaterials.Length; i++)
+            for (int i = 0; i < sharedRendererMaterials.Length; i++)
             {
-                Material material = sharedMaterials[i];
-                if (!IsSupportedMaterial(material))
+                Material material = sharedRendererMaterials[i];
+                if (material == null)
                 {
-                    if (logDetails)
-                    {
-                        string shaderName = material != null && material.shader != null ? material.shader.name : "<null shader>";
-                        string materialName = material != null ? material.name : "<null material>";
-                        LogDebug($"Material rejected: '{materialName}' shader='{shaderName}', expected='{requiredShaderName}'.");
-                    }
-
                     continue;
                 }
 
-                hasSupportedMaterial = true;
-                if (affectedMaterialSet.Add(material))
+                if (!materials.Contains(material))
                 {
-                    affectedMaterials.Add(material);
+                    continue;
+                }
+
+                if (matchedConfiguredMaterials == null)
+                {
+                    matchedConfiguredMaterials = new List<Material>();
+                }
+
+                if (!matchedConfiguredMaterials.Contains(material))
+                {
+                    matchedConfiguredMaterials.Add(material);
+                }
+            }
+
+            bool hasMaterialMatch = matchedConfiguredMaterials != null && matchedConfiguredMaterials.Count > 0;
+            if (!rendererIsListed && !hasMaterialMatch)
+            {
+                ReleaseRendererMaterialOwnership(renderer);
+                if (logDetails)
+                {
+                    LogDebug($"Renderer rejected: '{renderer.name}' is not in renderers list and has no configured shared material match.");
+                }
+
+                return false;
+            }
+
+            if (rendererIsListed)
+            {
+                Material[] rendererMaterials = AcquireRendererMaterials(renderer, instance: true);
+                if (observedRendererSet.Add(renderer))
+                {
+                    observedRenderers.Add(renderer);
                     if (logDetails)
                     {
-                        LogDebug($"Material accepted: '{material.name}' on renderer '{renderer.name}'.");
+                        LogDebug($"Renderer accepted via renderers list: '{renderer.name}'.");
                     }
                 }
-            }
 
-            if (!hasSupportedMaterial)
-            {
-                if (logDetails)
+                for (int i = 0; i < rendererMaterials.Length; i++)
                 {
-                    LogDebug($"Renderer rejected: '{renderer.name}' has no supported materials.");
+                    Material material = rendererMaterials[i];
+                    if (material == null)
+                    {
+                        continue;
+                    }
+
+                    if (observedMaterialSet.Add(material))
+                    {
+                        observedMaterials.Add(material);
+                        if (logDetails)
+                        {
+                            LogDebug($"Material registered from listed renderer: '{material.name}' on renderer '{renderer.name}'.");
+                        }
+                    }
                 }
 
-                return false;
-            }
-
-            if (affectedRendererSet.Add(renderer))
-            {
-                affectedRenderers.Add(renderer);
-                if (logDetails)
-                {
-                    LogDebug($"Renderer registered: '{renderer.name}'.");
-                }
-            }
-
-            ApplyStampState(renderer);
-            return true;
-        }
-
-        private bool IsSupportedMaterial(Material material)
-        {
-            if (material == null)
-            {
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(requiredShaderName))
-            {
+                ApplyStampState(renderer);
                 return true;
             }
 
-            Shader shader = material.shader;
-            return shader != null && shader.name == requiredShaderName;
+            for (int i = 0; i < matchedConfiguredMaterials.Count; i++)
+            {
+                Material material = matchedConfiguredMaterials[i];
+                if (observedMaterialSet.Add(material))
+                {
+                    observedMaterials.Add(material);
+                    if (logDetails)
+                    {
+                        LogDebug($"Material accepted via materials list: '{material.name}' on renderer '{renderer.name}'.");
+                    }
+                }
+
+                ApplyStampState(material);
+            }
+
+            if (logDetails)
+            {
+                LogDebug($"Renderer accepted via material match only: '{renderer.name}', matches={matchedConfiguredMaterials.Count}.");
+            }
+
+            return true;
+        }
+
+        private Material[] AcquireRendererMaterials(Renderer renderer, bool instance = true)
+        {
+            if (renderer == null)
+            {
+                return Array.Empty<Material>();
+            }
+
+            if (applyToSharedMaterial)
+            {
+                return renderer.sharedMaterials;
+            }
+
+            MaterialInstance materialInstance = renderer.EnsureComponent<MaterialInstance>();
+            Material[] acquiredMaterials = materialInstance.AcquireMaterials(this, instance);
+            if (instance)
+            {
+                instanceMaterialOwners.Add(renderer);
+            }
+
+            return acquiredMaterials ?? Array.Empty<Material>();
+        }
+
+        private void ReleaseRendererMaterialOwnership(Renderer renderer, bool autoDestroy = true)
+        {
+            if (applyToSharedMaterial || renderer == null || !instanceMaterialOwners.Contains(renderer))
+            {
+                return;
+            }
+
+            MaterialInstance materialInstance = renderer.GetComponent<MaterialInstance>();
+            if (materialInstance != null)
+            {
+                materialInstance.ReleaseMaterial(this, autoDestroy);
+            }
+
+            instanceMaterialOwners.Remove(renderer);
+        }
+
+        private void ReleaseAllRendererMaterialOwnership(bool autoDestroy = true)
+        {
+            if (instanceMaterialOwners.Count == 0)
+            {
+                return;
+            }
+
+            foreach (Renderer renderer in instanceMaterialOwners)
+            {
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                MaterialInstance materialInstance = renderer.GetComponent<MaterialInstance>();
+                if (materialInstance != null)
+                {
+                    materialInstance.ReleaseMaterial(this, autoDestroy);
+                }
+            }
+
+            instanceMaterialOwners.Clear();
         }
 
         private bool ShouldCaptureStampPose()
@@ -344,14 +574,14 @@ namespace VIRTOSHA.ZAnatomy
                 return;
             }
 
-            if (wedgeStampInverses.Count >= maxStamps)
+            if (sphereStampWorldToLocalMatrices.Count >= maxStamps)
             {
-                wedgeStampInverses.RemoveAt(0);
+                sphereStampWorldToLocalMatrices.RemoveAt(0);
                 LogDebug($"CaptureStamp: reached maxStamps={maxStamps}, removed oldest stamp.");
             }
 
-            wedgeStampInverses.Add(transform.worldToLocalMatrix);
-            currentStampCount = wedgeStampInverses.Count;
+            sphereStampWorldToLocalMatrices.Add(transform.worldToLocalMatrix);
+            currentStampCount = sphereStampWorldToLocalMatrices.Count;
             hasLastStampPose = true;
             lastStampPosition = transform.position;
             lastStampRotation = transform.rotation;
@@ -371,71 +601,86 @@ namespace VIRTOSHA.ZAnatomy
             {
                 stampEnabledID = Shader.PropertyToID(StampEnabledProperty);
                 stampCountID = Shader.PropertyToID(StampCountProperty);
-                stampInverseID = Shader.PropertyToID(StampInverseProperty);
+                stampWorldToLocalID = Shader.PropertyToID(StampWorldToLocalProperty);
+            }
+        }
+
+        private void ValidateCutterColliderConfiguration()
+        {
+            Collider cutterCollider = GetComponent<Collider>();
+            if (cutterCollider == null)
+            {
+                LogDebugWarning("StampCut requires a Collider for trigger or overlap detection.");
+                return;
+            }
+
+            if (cutterCollider is MeshCollider meshCollider && meshCollider.isTrigger && !meshCollider.convex)
+            {
+                LogDebugWarning("MeshCollider trigger requires Convex enabled. Trigger callbacks may not fire.");
             }
         }
 
         private void RebuildSetsFromLists()
         {
-            affectedRendererSet.Clear();
-            affectedMaterialSet.Clear();
+            observedRendererSet.Clear();
+            observedMaterialSet.Clear();
 
-            for (int i = affectedRenderers.Count - 1; i >= 0; i--)
+            for (int i = observedRenderers.Count - 1; i >= 0; i--)
             {
-                Renderer renderer = affectedRenderers[i];
+                Renderer renderer = observedRenderers[i];
                 if (renderer == null)
                 {
-                    affectedRenderers.RemoveAt(i);
+                    observedRenderers.RemoveAt(i);
                     continue;
                 }
 
-                affectedRendererSet.Add(renderer);
+                observedRendererSet.Add(renderer);
             }
 
-            for (int i = affectedMaterials.Count - 1; i >= 0; i--)
+            for (int i = observedMaterials.Count - 1; i >= 0; i--)
             {
-                Material material = affectedMaterials[i];
+                Material material = observedMaterials[i];
                 if (material == null)
                 {
-                    affectedMaterials.RemoveAt(i);
+                    observedMaterials.RemoveAt(i);
                     continue;
                 }
 
-                affectedMaterialSet.Add(material);
+                observedMaterialSet.Add(material);
             }
         }
 
         private void PushStampStateToTargets()
         {
             EnsureInitialized();
-            currentStampCount = wedgeStampInverses.Count;
+            currentStampCount = sphereStampWorldToLocalMatrices.Count;
             ApplyGlobalStampState();
 
-            for (int i = affectedRenderers.Count - 1; i >= 0; i--)
+            for (int i = observedRenderers.Count - 1; i >= 0; i--)
             {
-                Renderer renderer = affectedRenderers[i];
+                Renderer renderer = observedRenderers[i];
                 if (renderer == null)
                 {
-                    affectedRenderers.RemoveAt(i);
+                    observedRenderers.RemoveAt(i);
                     continue;
                 }
 
                 ApplyStampState(renderer);
             }
 
-            for (int i = affectedMaterials.Count - 1; i >= 0; i--)
+            for (int i = observedMaterials.Count - 1; i >= 0; i--)
             {
-                Material material = affectedMaterials[i];
+                Material material = observedMaterials[i];
                 if (material == null)
                 {
-                    affectedMaterials.RemoveAt(i);
+                    observedMaterials.RemoveAt(i);
                     continue;
                 }
 
                 ApplyStampState(material);
             }
 
-            LogDebug($"PushStampStateToTargets: stampCount={currentStampCount}, renderers={affectedRenderers.Count}, materials={affectedMaterials.Count}.");
+            LogDebug($"PushStampStateToTargets: stampCount={currentStampCount}, renderers={observedRenderers.Count}, materials={observedMaterials.Count}.");
         }
 
         private void ApplyStampState(Renderer renderer)
@@ -464,9 +709,9 @@ namespace VIRTOSHA.ZAnatomy
                 material.SetFloat(stampCountID, clampedCount);
             }
 
-            if (material.HasProperty(stampInverseID))
+            if (material.HasProperty(stampWorldToLocalID))
             {
-                material.SetMatrixArray(stampInverseID, wedgeStampInverseBuffer);
+                material.SetMatrixArray(stampWorldToLocalID, sphereStampWorldToLocalBuffer);
             }
         }
 
@@ -475,7 +720,7 @@ namespace VIRTOSHA.ZAnatomy
             int clampedCount = PrepareStampBuffer();
             block.SetFloat(stampEnabledID, clampedCount > 0 ? 1.0f : 0.0f);
             block.SetFloat(stampCountID, clampedCount);
-            block.SetMatrixArray(stampInverseID, wedgeStampInverseBuffer);
+            block.SetMatrixArray(stampWorldToLocalID, sphereStampWorldToLocalBuffer);
         }
 
         private int PrepareStampBuffer()
@@ -484,12 +729,12 @@ namespace VIRTOSHA.ZAnatomy
 
             for (int i = 0; i < MaxShaderStamps; i++)
             {
-                wedgeStampInverseBuffer[i] = Matrix4x4.identity;
+                sphereStampWorldToLocalBuffer[i] = Matrix4x4.identity;
             }
 
             for (int i = 0; i < clampedCount; i++)
             {
-                wedgeStampInverseBuffer[i] = wedgeStampInverses[i];
+                sphereStampWorldToLocalBuffer[i] = sphereStampWorldToLocalMatrices[i];
             }
 
             return clampedCount;
@@ -500,7 +745,7 @@ namespace VIRTOSHA.ZAnatomy
             int clampedCount = PrepareStampBuffer();
             Shader.SetGlobalFloat(stampEnabledID, clampedCount > 0 ? 1.0f : 0.0f);
             Shader.SetGlobalFloat(stampCountID, clampedCount);
-            Shader.SetGlobalMatrixArray(stampInverseID, wedgeStampInverseBuffer);
+            Shader.SetGlobalMatrixArray(stampWorldToLocalID, sphereStampWorldToLocalBuffer);
 
             LogDebug($"ApplyGlobalStampState: enabled={(clampedCount > 0 ? 1 : 0)}, count={clampedCount}.");
         }

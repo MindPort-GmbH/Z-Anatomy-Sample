@@ -878,15 +878,15 @@
     "m_Group": {
         "m_Id": ""
     },
-    "m_Name": "StampCutWedgeClip (Custom Function)",
+    "m_Name": "StampClipSpehereClip (Custom Function)",
     "m_DrawState": {
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": -638.0000610351563,
-            "y": 416.00006103515627,
-            "width": 273.3334655761719,
-            "height": 279.99993896484377
+            "x": -583.9999389648438,
+            "y": 413.9999694824219,
+            "width": 272.0,
+            "height": 277.9999694824219
         }
     },
     "m_Slots": [
@@ -909,7 +909,7 @@
         "m_SerializableColors": []
     },
     "m_SourceType": 0,
-    "m_FunctionName": "StampCutWedgeClip",
+    "m_FunctionName": "StampClipSpehereClip",
     "m_FunctionSource": "967e9efdb1e2bbe4cab683743445a444",
     "m_FunctionSourceUsePragmas": true,
     "m_FunctionBody": "Enter function body here..."
@@ -1868,8 +1868,8 @@
     "m_ObjectId": "84b6e3e08f85445b9e5a3a9fd95a6328",
     "m_Title": "Cross section",
     "m_Position": {
-        "x": -899.9996337890625,
-        "y": 720.0000610351563
+        "x": -900.0000610351563,
+        "y": 720.0
     }
 }
 
@@ -3008,4 +3008,3 @@
     "m_FirstTimeMigrationExecuted": true,
     "inspectorFoldoutMask": 0
 }
-
