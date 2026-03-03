@@ -201,7 +201,7 @@ Material:
     - _PlaneNormal: {r: -0, g: -1, b: -0, a: 0}
     - _PlaneNormal2: {r: 0, g: 0, b: 0, a: 0}
     - _PlaneNormal3: {r: 0, g: 0, b: 0, a: 0}
-    - _PlanePosition: {r: 0.047, g: 0.941, b: -0.303, a: 0}
+    - _PlanePosition: {r: -0.77887, g: 1.582, b: 0.52360964, a: 0}
     - _PlanePosition2: {r: 0, g: 0, b: 0, a: 0}
     - _PlanePosition3: {r: 0, g: 0, b: 0, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}

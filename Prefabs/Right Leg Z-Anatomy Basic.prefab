@@ -56,12 +56,7 @@ PrefabInstance:
     - target: {fileID: 1484324427442492194, guid: dff3c7135beb650459ad6916a4512ba9,
         type: 3}
       propertyPath: m_Name
-      value: Right Leg Z-Anatomy Variant
-      objectReference: {fileID: 0}
-    - target: {fileID: 1484324427442492194, guid: dff3c7135beb650459ad6916a4512ba9,
-        type: 3}
-      propertyPath: m_IsActive
-      value: 1
+      value: Right Leg Z-Anatomy Basic
       objectReference: {fileID: 0}
     - target: {fileID: 1660835355270043781, guid: dff3c7135beb650459ad6916a4512ba9,
         type: 3}
