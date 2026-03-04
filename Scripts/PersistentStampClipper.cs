@@ -11,8 +11,8 @@ namespace VIRTOSHA.ZAnatomy
     /// Clipping remains active until <see cref="ResetClipping"/> is called.
     /// </summary>
     [DisallowMultipleComponent]
-    [AddComponentMenu("VIRTOSHA/Z-Anatomy/Stamp Cut")]
-    public class StampCut : MonoBehaviour
+    [AddComponentMenu("VIRTOSHA/Z-Anatomy/Persistent Stamp Clipper")]
+    public class PersistentStampClipper : MonoBehaviour
     {
         /// <summary>
         /// Maximum retained stamps. Hard-limited by shader setting.
@@ -76,7 +76,7 @@ namespace VIRTOSHA.ZAnatomy
         private bool stampOnTriggerStay = true;
 
         [Header("Debug")]
-        [SerializeField, Tooltip("Enables StampCut diagnostic logs in the Unity Console.")]
+        [SerializeField, Tooltip("Enables PersistentStampClipper diagnostic logs in the Unity Console.")]
         private bool debugLogs = true;
 
         [SerializeField, Tooltip("Adds verbose trigger-level logs for overlap filtering and registration.")]
@@ -167,23 +167,6 @@ namespace VIRTOSHA.ZAnatomy
             }
         }
 
-        public void StampNow()
-        {
-            EnsureInitialized();
-            int beforeRendererCount = observedRenderers.Count;
-            int beforeMaterialCount = observedMaterials.Count;
-            int registeredCount;
-            int overlapCount = CollectCurrentIntersections(logDetails: true, out registeredCount);
-
-            LogDebug(
-                $"StampNow: overlaps={overlapCount}, registered={registeredCount}, newRenderers={observedRenderers.Count - beforeRendererCount}, " +
-                $"newMaterials={observedMaterials.Count - beforeMaterialCount}, existingStamps={currentStampCount}.");
-
-            CaptureStampFromCurrentPose(force: true);
-
-            LogDebug($"StampNow complete: currentStampCount={currentStampCount}.");
-        }
-
         [Button]
         public void ResetClipping()
         {
@@ -224,7 +207,7 @@ namespace VIRTOSHA.ZAnatomy
             Collider cutterCollider = GetComponent<Collider>();
             if (cutterCollider == null)
             {
-                LogDebugWarning("CollectCurrentIntersections: missing Collider on StampCut.");
+                LogDebugWarning("CollectCurrentIntersections: missing Collider on PersistentStampClipper.");
                 registeredCount = 0;
                 return 0;
             }
@@ -344,7 +327,7 @@ namespace VIRTOSHA.ZAnatomy
             {
                 if (logDetails)
                 {
-                    LogDebug($"Skipped collider '{other.name}': belongs to StampCut hierarchy.");
+                    LogDebug($"Skipped collider '{other.name}': belongs to PersistentStampClipper hierarchy.");
                 }
 
                 return false;
@@ -610,7 +593,7 @@ namespace VIRTOSHA.ZAnatomy
             Collider cutterCollider = GetComponent<Collider>();
             if (cutterCollider == null)
             {
-                LogDebugWarning("StampCut requires a Collider for trigger or overlap detection.");
+                LogDebugWarning("PersistentStampClipper requires a Collider for trigger or overlap detection.");
                 return;
             }
 
@@ -757,7 +740,7 @@ namespace VIRTOSHA.ZAnatomy
                 return;
             }
 
-            Debug.Log($"[StampCut:{name}] {message}", this);
+            Debug.Log($"[PersistentStampClipper:{name}] {message}", this);
         }
 
         private void LogDebugWarning(string message)
@@ -767,7 +750,7 @@ namespace VIRTOSHA.ZAnatomy
                 return;
             }
 
-            Debug.LogWarning($"[StampCut:{name}] {message}", this);
+            Debug.LogWarning($"[PersistentStampClipper:{name}] {message}", this);
         }
     }
 }
