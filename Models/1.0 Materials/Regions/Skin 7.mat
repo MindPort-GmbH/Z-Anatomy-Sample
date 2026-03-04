@@ -8,14 +8,12 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Skin 7
-  m_Shader: {fileID: -6465566751694194690, guid: 21ed8786b23d7c941b40103f1430dfaa,
+  m_Shader: {fileID: -6465566751694194690, guid: 01f6fc5b6f43a2c428e1ef1bf94d6676,
     type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords:
-  - _CLEARCOAT
-  - _EMISSION
+  m_InvalidKeywords: []
   m_LightmapFlags: 2
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -158,7 +156,7 @@ Material:
     - _OcclusionStrength: 1
     - _OpaqueCullMode: 2
     - _Parallax: 0.02
-    - _PlaneEnabled: 1
+    - _PlaneEnabled: 0
     - _QueueControl: 0
     - _QueueOffset: 0
     - _RayTracing: 0
@@ -206,10 +204,10 @@ Material:
     - _Color: {r: 1, g: 0, b: 0, a: 1}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _PlaneNormal: {r: 0, g: 1, b: 0, a: 0}
+    - _PlaneNormal: {r: -0, g: -1, b: -0, a: 0}
     - _PlaneNormal2: {r: 0, g: 0, b: 0, a: 0}
     - _PlaneNormal3: {r: 0, g: 0, b: 0, a: 0}
-    - _PlanePosition: {r: 0, g: 0, b: 0, a: 0}
+    - _PlanePosition: {r: -0.77887, g: 1.582, b: 0.52360964, a: 0}
     - _PlanePosition2: {r: 0, g: 0, b: 0, a: 0}
     - _PlanePosition3: {r: 0, g: 0, b: 0, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}

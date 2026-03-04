@@ -42,30 +42,30 @@ public class ModelSetUp : MonoBehaviour
         }
     }
 
-     private static void AddScriptAndMesh(List<Transform> gameObjects)
-     {
-         string actual = "";
-         try
-         {
-             foreach (Transform child in gameObjects)
-             {
-                 actual = child.name;
-                if(!child.name.Contains(".j") && !child.name.Contains(".i"))
+    private static void AddScriptAndMesh(List<Transform> gameObjects)
+    {
+        string actual = "";
+        try
+        {
+            foreach (Transform child in gameObjects)
+            {
+                actual = child.name;
+                if (!child.name.Contains(".j") && !child.name.Contains(".i"))
                 {
                     //child.gameObject.AddComponent<NameAndDescription>();
                     //child.gameObject.AddComponent<BodyPartVisibility>();
                 }
-                if (!child.name.Contains(".j") && !child.name.Contains(".i" )&& !child.name.Contains(".t") && !child.name.Contains(".s") && child.GetComponent<MeshRenderer>() != null)
+                if (!child.name.Contains(".j") && !child.name.Contains(".i") && !child.name.Contains(".t") && !child.name.Contains(".s") && child.GetComponent<MeshRenderer>() != null)
                 {
-                     child.gameObject.AddComponent<MeshCollider>();
+                    child.gameObject.AddComponent<MeshCollider>();
                 }
-             }
-         }
-         catch (System.Exception e)
-         {
-             Debug.Log("Error adding script and mesh to " + actual + ": " + e.Message);
-         }
-     }
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.Log("Error adding script and mesh to " + actual + ": " + e.Message);
+        }
+    }
 
     private static void SetLayer(List<Transform> gameObjects)
     {
@@ -97,10 +97,10 @@ public class ModelSetUp : MonoBehaviour
         }
     }
 
-     private static void CreateLinePoints(GameObject gameObject)
-     {
-         try
-         {
+    private static void CreateLinePoints(GameObject gameObject)
+    {
+        try
+        {
             string name = gameObject.name;
             Mesh mesh = gameObject.GetComponent<MeshFilter>().sharedMesh;
 
@@ -116,8 +116,8 @@ public class ModelSetUp : MonoBehaviour
             // Final point
             Vector3 max = mesh.vertices[7];
             // If for some reason the line does not have 8 vertices
-            if(max == null)
-                max = mesh.vertices[mesh.vertices.Length-1];
+            if (max == null)
+                max = mesh.vertices[mesh.vertices.Length - 1];
 
             // Set the origin point as child of the label
             GameObject minPoint = new GameObject();
@@ -134,12 +134,12 @@ public class ModelSetUp : MonoBehaviour
             // We don't need the mf and mr of the line, as it will be a LineRenderer
             DestroyImmediate(gameObject.GetComponent<MeshFilter>());
             DestroyImmediate(gameObject.GetComponent<MeshRenderer>());
-         }
-         catch (System.Exception e)
-         {
-             Debug.Log("Error creating line points of " + gameObject.name + ": " + e.Message);
-         }
-     }
+        }
+        catch (System.Exception e)
+        {
+            Debug.Log("Error creating line points of " + gameObject.name + ": " + e.Message);
+        }
+    }
 
 #endif
 
