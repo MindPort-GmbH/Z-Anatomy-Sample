@@ -168,6 +168,10 @@ namespace VIRTOSHA.ZAnatomy
         }
 
         [Button]
+        /// <summary>
+        /// Clears all stored sphere stamps and resets clipping state on all affected targets. 
+        /// Use this to reset state but keep clipping with the same clipper.
+        /// </summary>
         public void ResetClipping()
         {
             sphereStampWorldToLocalMatrices.Clear();
@@ -178,6 +182,10 @@ namespace VIRTOSHA.ZAnatomy
         }
 
         [Button]
+        /// <summary>
+        /// Clears tracked renderers and materials, and releases material ownership to allow them to be garbage collected if no longer referenced elsewhere.
+        /// Use this to clean up state when done with the clipper, or before reusing it to track a different set of targets.
+        /// </summary>
         public void ClearAffectedTargets()
         {
             ResetClipping();
