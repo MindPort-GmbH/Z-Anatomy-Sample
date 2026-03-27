@@ -210,9 +210,9 @@
         {
             "m_OutputSlot": {
                 "m_Node": {
-                    "m_Id": "6bb7bca2e61745c38e4c07a269a0392c"
+                    "m_Id": "251d3a74388f4d31b775f6719d7881e9"
                 },
-                "m_SlotId": 0
+                "m_SlotId": 2
             },
             "m_InputSlot": {
                 "m_Node": {
@@ -926,6 +926,9 @@
         },
         {
             "m_Id": "6cd4486d35ae4aca9b009176a72d71df"
+        },
+        {
+            "m_Id": "e7df2f5dd4dd4108ac2594eeb0e93bf8"
         }
     ],
     "synonyms": [
@@ -1677,6 +1680,36 @@
         "X"
     ],
     "m_LiteralMode": false
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.ColorRGBMaterialSlot",
+    "m_ObjectId": "e7df2f5dd4dd4108ac2594eeb0e93bf8",
+    "m_Id": 2,
+    "m_DisplayName": "TintedBaseColor",
+    "m_SlotType": 1,
+    "m_Hidden": false,
+    "m_ShaderOutputName": "TintedBaseColor",
+    "m_StageCapability": 3,
+    "m_Value": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+    },
+    "m_DefaultValue": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "m_Labels": [],
+    "m_ColorMode": 0,
+    "m_DefaultColor": {
+        "r": 0.5,
+        "g": 0.5,
+        "b": 0.5,
+        "a": 1.0
+    }
 }
 
 {
