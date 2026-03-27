@@ -646,13 +646,13 @@
     "m_RefNameGeneratedByDisplayName": "",
     "m_DefaultReferenceName": "Vector3_0befdcbb57554f3686768d41fac6c39e",
     "m_OverrideReferenceName": "_PlanePosition",
-    "m_GeneratePropertyBlock": true,
+    "m_GeneratePropertyBlock": false,
     "m_UseCustomSlotLabel": false,
     "m_CustomSlotLabel": "",
     "m_DismissedVersion": 0,
     "m_Precision": 0,
-    "overrideHLSLDeclaration": false,
-    "hlslDeclarationOverride": 0,
+    "overrideHLSLDeclaration": true,
+    "hlslDeclarationOverride": 2,
     "m_Hidden": false,
     "m_PerRendererData": false,
     "m_customAttributes": [],
@@ -1012,13 +1012,13 @@
     "m_RefNameGeneratedByDisplayName": "",
     "m_DefaultReferenceName": "Vector3_3c534c367d8f448a82088f4298b561d0",
     "m_OverrideReferenceName": "_PlaneNormal",
-    "m_GeneratePropertyBlock": true,
+    "m_GeneratePropertyBlock": false,
     "m_UseCustomSlotLabel": false,
     "m_CustomSlotLabel": "",
     "m_DismissedVersion": 0,
     "m_Precision": 0,
-    "overrideHLSLDeclaration": false,
-    "hlslDeclarationOverride": 0,
+    "overrideHLSLDeclaration": true,
+    "hlslDeclarationOverride": 2,
     "m_Hidden": false,
     "m_PerRendererData": false,
     "m_customAttributes": [],
@@ -1342,13 +1342,13 @@
     "m_RefNameGeneratedByDisplayName": "PlaneEnabled",
     "m_DefaultReferenceName": "_PlaneEnabled",
     "m_OverrideReferenceName": "",
-    "m_GeneratePropertyBlock": true,
+    "m_GeneratePropertyBlock": false,
     "m_UseCustomSlotLabel": false,
     "m_CustomSlotLabel": "",
     "m_DismissedVersion": 0,
     "m_Precision": 0,
-    "overrideHLSLDeclaration": false,
-    "hlslDeclarationOverride": 0,
+    "overrideHLSLDeclaration": true,
+    "hlslDeclarationOverride": 2,
     "m_Hidden": false,
     "m_PerRendererData": false,
     "m_customAttributes": [],
@@ -1520,10 +1520,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": -497.0,
-            "y": 202.0,
-            "width": 131.0,
-            "height": 34.0
+            "x": -217.33335876464845,
+            "y": 248.00003051757813,
+            "width": 132.00010681152345,
+            "height": 36.0
         }
     },
     "m_Slots": [
@@ -1789,8 +1789,8 @@
     "m_ObjectId": "84b6e3e08f85445b9e5a3a9fd95a6328",
     "m_Title": "Cross section",
     "m_Position": {
-        "x": -1985.9998779296875,
-        "y": 684.6666259765625
+        "x": -1986.0001220703125,
+        "y": 684.666748046875
     }
 }
 
@@ -2023,12 +2023,6 @@
             "m_Id": "1f3e9fa79b9a45f9b48b8e57abf9f9c8"
         },
         {
-            "m_Id": "0befdcbb57554f3686768d41fac6c39e"
-        },
-        {
-            "m_Id": "3c534c367d8f448a82088f4298b561d0"
-        },
-        {
             "m_Id": "593468358e764da4840c26ba06654d38"
         },
         {
@@ -2047,13 +2041,19 @@
             "m_Id": "46ac7277aca54803827facb739a6fcca"
         },
         {
-            "m_Id": "5368f8f6b9d5414f980e416a85dc2549"
-        },
-        {
             "m_Id": "f990ebd976a4468899f766e19a2ada15"
         },
         {
             "m_Id": "07cf712ea66c4b72b6a914ff82be42d8"
+        },
+        {
+            "m_Id": "5368f8f6b9d5414f980e416a85dc2549"
+        },
+        {
+            "m_Id": "0befdcbb57554f3686768d41fac6c39e"
+        },
+        {
+            "m_Id": "3c534c367d8f448a82088f4298b561d0"
         }
     ]
 }
