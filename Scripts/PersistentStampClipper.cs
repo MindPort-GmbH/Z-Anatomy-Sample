@@ -7,20 +7,18 @@ using UnityEngine;
 namespace VIRTOSHA.ZAnatomy
 {
     /// <summary>
-    /// Records clip stamps from trigger intersections and applies them persistently to touched targets.
-    /// Clipping remains active until <see cref="ResetClipping"/> is called.
+    /// Records clip stamps from trigger intersections and forwards them to StampClipCoordinator.
+    /// Stamps remain active until <see cref="ResetClipping"/> is called.
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("VIRTOSHA/Z-Anatomy/Persistent Stamp Clipper")]
     public class PersistentStampClipper : MonoBehaviour
     {
-        /// <summary>
-        /// Maximum retained stamps. Hard-limited by shader setting.
-        /// </summary>
         private const int MaxShaderStamps = 64;
-        private const string StampEnabledProperty = "_StampClipEnabled";
-        private const string StampCountProperty = "_SphereStampCount";
-        private const string StampWorldToLocalProperty = "_SphereStampWorldToLocal";
+
+        [Header("Coordination")]
+        [SerializeField, Tooltip("Global stamp clip coordinator. This component only publishes stamp sources and does not write shader properties directly.")]
+        private StampClipCoordinator stampClipCoordinator;
 
         [Header("Target Filtering")]
         [SerializeField, Tooltip("Physics layers that can be stamped when intersecting the cutter volume.")]
@@ -35,8 +33,7 @@ namespace VIRTOSHA.ZAnatomy
         /// This cannot be altered when renderers are already specified.
         /// </summary>
         /// <remarks>
-        /// Applying to shared materials will allow for GPU instancing to batch calls between Renderers
-        /// that interact with the same clipping primitives.
+        /// Applying to shared materials will allow for GPU instancing to batch calls between Renderers.
         /// </remarks>
         public bool ApplyToSharedMaterial
         {
@@ -88,41 +85,47 @@ namespace VIRTOSHA.ZAnatomy
         [SerializeField, Tooltip("Materials currently tracked for receiving stamp state updates.")]
         private List<Material> observedMaterials = new List<Material>();
 
-        [SerializeField, Tooltip("Current number of stored stamps applied to the shader.")]
+        [SerializeField, Tooltip("Current number of stored stamps published to the coordinator.")]
         private int currentStampCount;
 
         private readonly HashSet<Renderer> observedRendererSet = new HashSet<Renderer>();
         private readonly HashSet<Material> observedMaterialSet = new HashSet<Material>();
         private readonly HashSet<Renderer> instanceMaterialOwners = new HashSet<Renderer>();
         private readonly List<Matrix4x4> sphereStampWorldToLocalMatrices = new List<Matrix4x4>();
-        private readonly Matrix4x4[] sphereStampWorldToLocalBuffer = new Matrix4x4[MaxShaderStamps];
 
-        private MaterialPropertyBlock materialPropertyBlock;
-        private int stampEnabledID;
-        private int stampCountID;
-        private int stampWorldToLocalID;
         private bool hasLastStampPose;
         private Vector3 lastStampPosition;
         private Quaternion lastStampRotation;
+        private bool missingCoordinatorWarningLogged;
 
         public IReadOnlyList<Material> AffectedMaterials => observedMaterials;
 
         private void Awake()
         {
-            EnsureInitialized();
+            EnsureCoordinatorReference();
         }
 
         private void OnEnable()
         {
-            EnsureInitialized();
+            EnsureCoordinatorReference();
             RebuildSetsFromLists();
             ValidateCutterColliderConfiguration();
-            PushStampStateToTargets();
+            PushStampStateToCoordinator();
+        }
+
+        private void OnDisable()
+        {
+            ClearCoordinatorSource();
         }
 
         private void OnDestroy()
         {
-            ClearAffectedTargets();
+            ClearCoordinatorSource();
+            ReleaseAllRendererMaterialOwnership();
+            observedRendererSet.Clear();
+            observedMaterialSet.Clear();
+            observedRenderers.Clear();
+            observedMaterials.Clear();
         }
 
         private void OnValidate()
@@ -130,6 +133,7 @@ namespace VIRTOSHA.ZAnatomy
             maxStamps = Mathf.Clamp(maxStamps, 1, MaxShaderStamps);
             minStampTranslation = Mathf.Max(0.0f, minStampTranslation);
             minStampRotation = Mathf.Clamp(minStampRotation, 0.0f, 180.0f);
+            EnsureCoordinatorReference();
         }
 
         private void OnTriggerEnter(Collider other)
@@ -168,24 +172,16 @@ namespace VIRTOSHA.ZAnatomy
         }
 
         [Button]
-        /// <summary>
-        /// Clears all stored sphere stamps and resets clipping state on all affected targets. 
-        /// Use this to reset state but keep clipping with the same clipper.
-        /// </summary>
         public void ResetClipping()
         {
             sphereStampWorldToLocalMatrices.Clear();
             currentStampCount = 0;
             hasLastStampPose = false;
-            PushStampStateToTargets();
+            PushStampStateToCoordinator();
             LogDebug("ResetClipping: cleared all stored sphere stamps.");
         }
 
         [Button]
-        /// <summary>
-        /// Clears tracked renderers and materials, and releases material ownership to allow them to be garbage collected if no longer referenced elsewhere.
-        /// Use this to clean up state when done with the clipper, or before reusing it to track a different set of targets.
-        /// </summary>
         public void ClearAffectedTargets()
         {
             ResetClipping();
@@ -308,7 +304,7 @@ namespace VIRTOSHA.ZAnatomy
             Vector3 boundsHalfExtents = bounds.extents;
             if (boundsHalfExtents.sqrMagnitude <= Mathf.Epsilon)
             {
-                return System.Array.Empty<Collider>();
+                return Array.Empty<Collider>();
             }
 
             return Physics.OverlapBox(
@@ -390,21 +386,12 @@ namespace VIRTOSHA.ZAnatomy
             for (int i = 0; i < sharedRendererMaterials.Length; i++)
             {
                 Material material = sharedRendererMaterials[i];
-                if (material == null)
+                if (material == null || !materials.Contains(material))
                 {
                     continue;
                 }
 
-                if (!materials.Contains(material))
-                {
-                    continue;
-                }
-
-                if (matchedConfiguredMaterials == null)
-                {
-                    matchedConfiguredMaterials = new List<Material>();
-                }
-
+                matchedConfiguredMaterials ??= new List<Material>();
                 if (!matchedConfiguredMaterials.Contains(material))
                 {
                     matchedConfiguredMaterials.Add(material);
@@ -453,7 +440,6 @@ namespace VIRTOSHA.ZAnatomy
                     }
                 }
 
-                ApplyStampState(renderer);
                 return true;
             }
 
@@ -468,8 +454,6 @@ namespace VIRTOSHA.ZAnatomy
                         LogDebug($"Material accepted via materials list: '{material.name}' on renderer '{renderer.name}'.");
                     }
                 }
-
-                ApplyStampState(material);
             }
 
             if (logDetails)
@@ -577,23 +561,8 @@ namespace VIRTOSHA.ZAnatomy
             lastStampPosition = transform.position;
             lastStampRotation = transform.rotation;
 
-            PushStampStateToTargets();
+            PushStampStateToCoordinator();
             LogDebug($"CaptureStamp: added stamp at position={transform.position}, rotation={transform.rotation.eulerAngles}, count={currentStampCount}.");
-        }
-
-        private void EnsureInitialized()
-        {
-            if (materialPropertyBlock == null)
-            {
-                materialPropertyBlock = new MaterialPropertyBlock();
-            }
-
-            if (stampEnabledID == 0)
-            {
-                stampEnabledID = Shader.PropertyToID(StampEnabledProperty);
-                stampCountID = Shader.PropertyToID(StampCountProperty);
-                stampWorldToLocalID = Shader.PropertyToID(StampWorldToLocalProperty);
-            }
         }
 
         private void ValidateCutterColliderConfiguration()
@@ -641,104 +610,63 @@ namespace VIRTOSHA.ZAnatomy
             }
         }
 
-        private void PushStampStateToTargets()
+        private void PushStampStateToCoordinator()
         {
-            EnsureInitialized();
             currentStampCount = sphereStampWorldToLocalMatrices.Count;
-            ApplyGlobalStampState();
 
-            for (int i = observedRenderers.Count - 1; i >= 0; i--)
-            {
-                Renderer renderer = observedRenderers[i];
-                if (renderer == null)
-                {
-                    observedRenderers.RemoveAt(i);
-                    continue;
-                }
-
-                ApplyStampState(renderer);
-            }
-
-            for (int i = observedMaterials.Count - 1; i >= 0; i--)
-            {
-                Material material = observedMaterials[i];
-                if (material == null)
-                {
-                    observedMaterials.RemoveAt(i);
-                    continue;
-                }
-
-                ApplyStampState(material);
-            }
-
-            LogDebug($"PushStampStateToTargets: stampCount={currentStampCount}, renderers={observedRenderers.Count}, materials={observedMaterials.Count}.");
-        }
-
-        private void ApplyStampState(Renderer renderer)
-        {
-            renderer.GetPropertyBlock(materialPropertyBlock);
-            WriteStampState(materialPropertyBlock);
-            renderer.SetPropertyBlock(materialPropertyBlock);
-        }
-
-        private void ApplyStampState(Material material)
-        {
-            int clampedCount = PrepareStampBuffer();
-            if (material == null)
+            if (!TryGetCoordinator(out StampClipCoordinator coordinator))
             {
                 return;
             }
 
-            // Stamp uniforms are applied globally. Apply to material only when these properties exist.
-            if (material.HasProperty(stampEnabledID))
+            if (currentStampCount == 0)
             {
-                material.SetFloat(stampEnabledID, clampedCount > 0 ? 1.0f : 0.0f);
+                coordinator.ClearSource(this);
+            }
+            else
+            {
+                coordinator.SetSourceMatrices(this, sphereStampWorldToLocalMatrices);
             }
 
-            if (material.HasProperty(stampCountID))
+            LogDebug($"Published to coordinator: stampCount={currentStampCount}.");
+        }
+
+        private void ClearCoordinatorSource()
+        {
+            if (!TryGetCoordinator(out StampClipCoordinator coordinator))
             {
-                material.SetFloat(stampCountID, clampedCount);
+                return;
             }
 
-            if (material.HasProperty(stampWorldToLocalID))
+            coordinator.ClearSource(this);
+            LogDebug("Cleared coordinator source.");
+        }
+
+        private void EnsureCoordinatorReference()
+        {
+            if (stampClipCoordinator == null)
             {
-                material.SetMatrixArray(stampWorldToLocalID, sphereStampWorldToLocalBuffer);
+                stampClipCoordinator = FindAnyObjectByType<StampClipCoordinator>();
             }
         }
 
-        private void WriteStampState(MaterialPropertyBlock block)
+        private bool TryGetCoordinator(out StampClipCoordinator coordinator)
         {
-            int clampedCount = PrepareStampBuffer();
-            block.SetFloat(stampEnabledID, clampedCount > 0 ? 1.0f : 0.0f);
-            block.SetFloat(stampCountID, clampedCount);
-            block.SetMatrixArray(stampWorldToLocalID, sphereStampWorldToLocalBuffer);
-        }
-
-        private int PrepareStampBuffer()
-        {
-            int clampedCount = Mathf.Clamp(currentStampCount, 0, MaxShaderStamps);
-
-            for (int i = 0; i < MaxShaderStamps; i++)
+            EnsureCoordinatorReference();
+            coordinator = stampClipCoordinator;
+            if (coordinator != null)
             {
-                sphereStampWorldToLocalBuffer[i] = Matrix4x4.identity;
+                missingCoordinatorWarningLogged = false;
+                return true;
             }
 
-            for (int i = 0; i < clampedCount; i++)
+            if (!missingCoordinatorWarningLogged)
             {
-                sphereStampWorldToLocalBuffer[i] = sphereStampWorldToLocalMatrices[i];
+                Debug.LogWarning($"[{nameof(PersistentStampClipper)}:{name}] Missing {nameof(StampClipCoordinator)} reference.", this);
+                missingCoordinatorWarningLogged = true;
             }
 
-            return clampedCount;
-        }
-
-        private void ApplyGlobalStampState()
-        {
-            int clampedCount = PrepareStampBuffer();
-            Shader.SetGlobalFloat(stampEnabledID, clampedCount > 0 ? 1.0f : 0.0f);
-            Shader.SetGlobalFloat(stampCountID, clampedCount);
-            Shader.SetGlobalMatrixArray(stampWorldToLocalID, sphereStampWorldToLocalBuffer);
-
-            LogDebug($"ApplyGlobalStampState: enabled={(clampedCount > 0 ? 1 : 0)}, count={clampedCount}.");
+            return false;
         }
 
         private void LogDebug(string message)
@@ -748,7 +676,7 @@ namespace VIRTOSHA.ZAnatomy
                 return;
             }
 
-            Debug.Log($"[PersistentStampClipper:{name}] {message}", this);
+            Debug.Log($"[{nameof(PersistentStampClipper)}:{name}] {message}", this);
         }
 
         private void LogDebugWarning(string message)
@@ -758,7 +686,7 @@ namespace VIRTOSHA.ZAnatomy
                 return;
             }
 
-            Debug.LogWarning($"[PersistentStampClipper:{name}] {message}", this);
+            Debug.LogWarning($"[{nameof(PersistentStampClipper)}:{name}] {message}", this);
         }
     }
 }

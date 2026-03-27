@@ -53,6 +53,10 @@ namespace VIRTOSHA.ZAnatomy
         [SerializeField]
         private List<StampGroup> stampGroups = new List<StampGroup>();
 
+        [Header("Integration")]
+        [SerializeField, Tooltip("Global stamp clip coordinator that receives active cut visualisation stamps.")]
+        private StampClipCoordinator stampClipCoordinator;
+
         [Header("Startup")]
         [SerializeField]
         private bool forceConfiguredStampsInactiveOnStartup = true;
@@ -62,16 +66,31 @@ namespace VIRTOSHA.ZAnatomy
 
         private void Awake()
         {
+            EnsureCoordinatorReference();
+
             if (forceConfiguredStampsInactiveOnStartup)
             {
                 DeactivateAllConfiguredStamps();
             }
+
+            NotifyCoordinator();
+        }
+
+        private void OnDisable()
+        {
+            ClearCoordinatorSource();
+        }
+
+        private void OnDestroy()
+        {
+            ClearCoordinatorSource();
         }
 
         private void OnValidate()
         {
             stamps ??= new List<GameObject>();
             stampGroups ??= new List<StampGroup>();
+            EnsureCoordinatorReference();
 
             for (int i = stampGroups.Count - 1; i >= 0; i--)
             {
@@ -180,6 +199,7 @@ namespace VIRTOSHA.ZAnatomy
 
             defaultGroup.SetGroupName("Default");
             defaultGroup.SetStampObjects(stamps);
+            NotifyCoordinator();
         }
 
         private void DeactivateAllConfiguredStamps()
@@ -192,6 +212,8 @@ namespace VIRTOSHA.ZAnatomy
                     stamp.SetActive(false);
                 }
             }
+
+            NotifyCoordinator();
         }
 
         private HashSet<GameObject> CollectConfiguredStamps()
@@ -238,6 +260,34 @@ namespace VIRTOSHA.ZAnatomy
             return uniqueStamps;
         }
 
+        private List<Matrix4x4> CollectActiveStampMatrices()
+        {
+            List<Matrix4x4> matrices = new List<Matrix4x4>();
+            HashSet<GameObject> configuredStamps = CollectConfiguredStamps();
+
+            foreach (GameObject source in configuredStamps)
+            {
+                if (source == null || !source.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                BaseShaderClippingSphere[] spheres = source.GetComponentsInChildren<BaseShaderClippingSphere>(false);
+                for (int i = 0; i < spheres.Length; i++)
+                {
+                    BaseShaderClippingSphere sphere = spheres[i];
+                    if (sphere == null || !sphere.isActiveAndEnabled)
+                    {
+                        continue;
+                    }
+
+                    matrices.Add(sphere.transform.worldToLocalMatrix);
+                }
+            }
+
+            return matrices;
+        }
+
         private void ActivateObject(GameObject stampObject, string source)
         {
             if (stampObject == null)
@@ -247,6 +297,44 @@ namespace VIRTOSHA.ZAnatomy
             }
 
             stampObject.SetActive(true);
+            NotifyCoordinator();
+        }
+
+        private void EnsureCoordinatorReference()
+        {
+            if (stampClipCoordinator == null)
+            {
+                stampClipCoordinator = FindAnyObjectByType<StampClipCoordinator>();
+            }
+        }
+
+        private void NotifyCoordinator()
+        {
+            EnsureCoordinatorReference();
+            if (stampClipCoordinator == null)
+            {
+                return;
+            }
+
+            List<Matrix4x4> matrices = CollectActiveStampMatrices();
+            if (matrices.Count == 0)
+            {
+                stampClipCoordinator.ClearSource(this);
+                return;
+            }
+
+            stampClipCoordinator.SetSourceMatrices(this, matrices);
+        }
+
+        private void ClearCoordinatorSource()
+        {
+            EnsureCoordinatorReference();
+            if (stampClipCoordinator == null)
+            {
+                return;
+            }
+
+            stampClipCoordinator.ClearSource(this);
         }
     }
 }
