@@ -4,7 +4,7 @@ using EasyButtons;
 using Microsoft.MixedReality.GraphicsTools;
 using UnityEngine;
 
-namespace VIRTOSHA.ZAnatomy
+namespace VIRTOSHA.ZAnatomy.Clipping
 {
     /// <summary>
     /// Records clip stamps from trigger intersections and forwards them to StampClipCoordinator.

@@ -3,63 +3,30 @@ using System.Collections.Generic;
 using EasyButtons;
 using UnityEngine;
 
-namespace VIRTOSHA.ZAnatomy
+namespace VIRTOSHA.ZAnatomy.Clipping
 {
+    /// <summary>
+    /// Activates configured stamp GameObjects and publishes active clipping sphere matrices
+    /// to <see cref="StampClipCoordinator"/> as a named source.
+    /// </summary>
     [DisallowMultipleComponent]
-    [AddComponentMenu("VIRTOSHA/Z-Anatomy/Cut Visualisation")]
-    public class CutVisualisation : MonoBehaviour
+    [AddComponentMenu("VIRTOSHA/Z-Anatomy/Stamp Clip Controller")]
+    public class StampClipController : MonoBehaviour
     {
-        [Serializable]
-        public class StampGroup
-        {
-            [SerializeField]
-            private string groupName = "Default";
-
-            [SerializeField]
-            private List<GameObject> stampObjects = new List<GameObject>();
-
-            public string GroupName => groupName;
-            public IReadOnlyList<GameObject> StampObjects => stampObjects;
-
-            public void SetGroupName(string value)
-            {
-                groupName = string.IsNullOrWhiteSpace(value) ? "Default" : value;
-            }
-
-            public void SetStampObjects(IEnumerable<GameObject> objects)
-            {
-                stampObjects = new List<GameObject>();
-                if (objects == null)
-                {
-                    return;
-                }
-
-                HashSet<GameObject> unique = new HashSet<GameObject>();
-                foreach (GameObject stamp in objects)
-                {
-                    if (stamp != null && unique.Add(stamp))
-                    {
-                        stampObjects.Add(stamp);
-                    }
-                }
-            }
-        }
+        [Header("Integration")]
+        [SerializeField, Tooltip("Global stamp clip coordinator that receives active stamp controller stamps.")]
+        private StampClipCoordinator stampClipCoordinator;
 
         [Header("Stamp Sources")]
+        [SerializeField]
+        private bool forceStampsInactiveOnStart = true;
+
         [SerializeField]
         private List<GameObject> stamps = new List<GameObject>();
 
         [Header("Stamp Groups")]
         [SerializeField]
         private List<StampGroup> stampGroups = new List<StampGroup>();
-
-        [Header("Integration")]
-        [SerializeField, Tooltip("Global stamp clip coordinator that receives active cut visualisation stamps.")]
-        private StampClipCoordinator stampClipCoordinator;
-
-        [Header("Startup")]
-        [SerializeField]
-        private bool forceConfiguredStampsInactiveOnStartup = true;
 
         public IReadOnlyList<GameObject> Stamps => stamps;
         public IReadOnlyList<StampGroup> StampGroups => stampGroups;
@@ -68,7 +35,7 @@ namespace VIRTOSHA.ZAnatomy
         {
             EnsureCoordinatorReference();
 
-            if (forceConfiguredStampsInactiveOnStartup)
+            if (forceStampsInactiveOnStart)
             {
                 DeactivateAllConfiguredStamps();
             }
@@ -105,7 +72,7 @@ namespace VIRTOSHA.ZAnatomy
         {
             if (index < 0 || index >= stamps.Count)
             {
-                Debug.LogWarning($"[{nameof(CutVisualisation)}:{name}] Stamp index {index} is out of range.", this);
+                Debug.LogWarning($"[{nameof(StampClipController)}:{name}] Stamp index {index} is out of range.", this);
                 return;
             }
 
@@ -116,21 +83,21 @@ namespace VIRTOSHA.ZAnatomy
         {
             if (groupIndex < 0 || groupIndex >= stampGroups.Count)
             {
-                Debug.LogWarning($"[{nameof(CutVisualisation)}:{name}] Group index {groupIndex} is out of range.", this);
+                Debug.LogWarning($"[{nameof(StampClipController)}:{name}] Group index {groupIndex} is out of range.", this);
                 return;
             }
 
             StampGroup group = stampGroups[groupIndex];
             if (group == null)
             {
-                Debug.LogWarning($"[{nameof(CutVisualisation)}:{name}] Group index {groupIndex} is null.", this);
+                Debug.LogWarning($"[{nameof(StampClipController)}:{name}] Group index {groupIndex} is null.", this);
                 return;
             }
 
             IReadOnlyList<GameObject> groupStamps = group.StampObjects;
             if (groupStamps == null)
             {
-                Debug.LogWarning($"[{nameof(CutVisualisation)}:{name}] Group '{group.GroupName}' has no stamp list.", this);
+                Debug.LogWarning($"[{nameof(StampClipController)}:{name}] Group '{group.GroupName}' has no stamp list.", this);
                 return;
             }
 
@@ -144,7 +111,7 @@ namespace VIRTOSHA.ZAnatomy
         {
             if (string.IsNullOrWhiteSpace(groupName))
             {
-                Debug.LogWarning($"[{nameof(CutVisualisation)}:{name}] Group name is empty.", this);
+                Debug.LogWarning($"[{nameof(StampClipController)}:{name}] Group name is empty.", this);
                 return;
             }
 
@@ -158,7 +125,7 @@ namespace VIRTOSHA.ZAnatomy
                 }
             }
 
-            Debug.LogWarning($"[{nameof(CutVisualisation)}:{name}] No group named '{groupName}' found.", this);
+            Debug.LogWarning($"[{nameof(StampClipController)}:{name}] No group named '{groupName}' found.", this);
         }
 
         [Button]
@@ -292,7 +259,7 @@ namespace VIRTOSHA.ZAnatomy
         {
             if (stampObject == null)
             {
-                Debug.LogWarning($"[{nameof(CutVisualisation)}:{name}] Missing stamp object for {source}.", this);
+                Debug.LogWarning($"[{nameof(StampClipController)}:{name}] Missing stamp object for {source}.", this);
                 return;
             }
 

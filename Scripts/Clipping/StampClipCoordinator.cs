@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using EasyButtons;
 using UnityEngine;
 
-namespace VIRTOSHA.ZAnatomy
+namespace VIRTOSHA.ZAnatomy.Clipping
 {
     /// <summary>
     /// Single global writer for stamp clipping shader globals.
@@ -263,6 +263,9 @@ namespace VIRTOSHA.ZAnatomy
             Debug.Log($"[{nameof(StampClipCoordinator)}:{name}] {message}", this);
         }
 
+        /// <summary>
+        /// Per-source cached matrix payload and recency sequence for merge ordering.
+        /// </summary>
         private sealed class SourceState
         {
             public SourceState(Object owner)

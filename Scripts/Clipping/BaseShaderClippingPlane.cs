@@ -1,7 +1,7 @@
 using Microsoft.MixedReality.GraphicsTools;
 using UnityEngine;
 
-namespace VIRTOSHA.ZAnatomy
+namespace VIRTOSHA.ZAnatomy.Clipping
 {
     /// <summary>
     /// Clipping plane compatible with both GraphicsTools clipping shaders and

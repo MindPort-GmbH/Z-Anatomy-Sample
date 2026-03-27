@@ -1,7 +1,7 @@
 using Microsoft.MixedReality.GraphicsTools;
 using UnityEngine;
 
-namespace VIRTOSHA.ZAnatomy
+namespace VIRTOSHA.ZAnatomy.Clipping
 {
     /// <summary>
     /// GraphicsTools clipping sphere that only drives _ClipSphereInverseTransform.
