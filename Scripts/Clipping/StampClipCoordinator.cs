@@ -7,15 +7,20 @@ namespace VIRTOSHA.ZAnatomy.Clipping
     /// <summary>
     /// Single global writer for stamp clipping shader globals.
     /// Aggregates stamp matrices from multiple source owners and publishes one merged result.
+    /// Also routes source influence to target renderers/materials via a per-target source mask.
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("VIRTOSHA/Z-Anatomy/Stamp Clip Coordinator")]
     public class StampClipCoordinator : MonoBehaviour
     {
         private const int MaxShaderStamps = 64;
+        private const int MaxSourceBits = 32;
+
         private const string StampEnabledProperty = "_StampClipEnabled";
         private const string StampCountProperty = "_SphereStampCount";
         private const string StampWorldToLocalProperty = "_SphereStampWorldToLocal";
+        private const string StampSourceIndexProperty = "_SphereStampSourceIndex";
+        private const string StampSourceMaskProperty = "_StampClipSourceMask";
 
         [SerializeField, Tooltip("Enables debug logs for source registration and global stamp updates.")]
         private bool debugLogs;
@@ -29,11 +34,25 @@ namespace VIRTOSHA.ZAnatomy.Clipping
         private readonly Dictionary<int, SourceState> sources = new Dictionary<int, SourceState>();
         private readonly List<SourceState> orderedSources = new List<SourceState>();
         private readonly List<Matrix4x4> mergedMatrices = new List<Matrix4x4>(MaxShaderStamps);
+        private readonly List<int> mergedSourceIndices = new List<int>(MaxShaderStamps);
+
         private readonly Matrix4x4[] matrixBuffer = new Matrix4x4[MaxShaderStamps];
+        private readonly float[] sourceIndexBuffer = new float[MaxShaderStamps];
+        private readonly bool[] usedSourceBits = new bool[MaxSourceBits];
+
+        private readonly Dictionary<Renderer, uint> rendererMasks = new Dictionary<Renderer, uint>();
+        private readonly Dictionary<Material, uint> materialMasks = new Dictionary<Material, uint>();
+        private readonly HashSet<Renderer> lastAppliedRenderers = new HashSet<Renderer>();
+        private readonly HashSet<Material> lastAppliedMaterials = new HashSet<Material>();
+        private readonly HashSet<int> warnedMaterialsMissingMaskProperty = new HashSet<int>();
+        private MaterialPropertyBlock propertyBlock;
 
         private int stampEnabledID;
         private int stampCountID;
         private int stampWorldToLocalID;
+        private int stampSourceIndexID;
+        private int stampSourceMaskID;
+
         private long updateSequence;
         private bool propertyIdsInitialized;
         private bool isDirty = true;
@@ -50,41 +69,21 @@ namespace VIRTOSHA.ZAnatomy.Clipping
 
         public void SetSourceMatrices(Object sourceOwner, IReadOnlyList<Matrix4x4> matrices)
         {
-            if (sourceOwner == null)
-            {
-                Debug.LogWarning($"[{nameof(StampClipCoordinator)}:{name}] Ignored SetSourceMatrices with null source owner.", this);
-                return;
-            }
+            SetSourceStateInternal(sourceOwner, matrices, null, null, updateMatrices: true, updateTargets: false);
+        }
 
-            int sourceId = sourceOwner.GetInstanceID();
-            if (!sources.TryGetValue(sourceId, out SourceState state))
-            {
-                state = new SourceState(sourceOwner);
-                sources[sourceId] = state;
-            }
+        public void SetSourceTargets(Object sourceOwner, IReadOnlyList<Renderer> targetRenderers, IReadOnlyList<Material> targetMaterials)
+        {
+            SetSourceStateInternal(sourceOwner, null, targetRenderers, targetMaterials, updateMatrices: false, updateTargets: true);
+        }
 
-            state.Matrices.Clear();
-            if (matrices != null)
-            {
-                for (int i = 0; i < matrices.Count; i++)
-                {
-                    state.Matrices.Add(matrices[i]);
-                }
-            }
-
-            if (state.Matrices.Count == 0)
-            {
-                sources.Remove(sourceId);
-                LogDebug($"Removed source '{sourceOwner.name}' because it has no matrices.");
-            }
-            else
-            {
-                state.Sequence = ++updateSequence;
-                sources[sourceId] = state;
-                LogDebug($"Updated source '{sourceOwner.name}' with {state.Matrices.Count} matrix/matrices.");
-            }
-
-            isDirty = true;
+        public void SetSourceState(
+            Object sourceOwner,
+            IReadOnlyList<Matrix4x4> matrices,
+            IReadOnlyList<Renderer> targetRenderers,
+            IReadOnlyList<Material> targetMaterials)
+        {
+            SetSourceStateInternal(sourceOwner, matrices, targetRenderers, targetMaterials, updateMatrices: true, updateTargets: true);
         }
 
         public void ClearSource(Object sourceOwner)
@@ -94,11 +93,16 @@ namespace VIRTOSHA.ZAnatomy.Clipping
                 return;
             }
 
-            if (sources.Remove(sourceOwner.GetInstanceID()))
+            int sourceId = sourceOwner.GetInstanceID();
+            if (!sources.TryGetValue(sourceId, out SourceState state))
             {
-                LogDebug($"Cleared source '{sourceOwner.name}'.");
-                isDirty = true;
+                return;
             }
+
+            ReleaseSourceBit(state);
+            sources.Remove(sourceId);
+            LogDebug($"Cleared source '{sourceOwner.name}'.");
+            isDirty = true;
         }
 
         public void ClearAllSources()
@@ -106,6 +110,11 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             if (sources.Count == 0)
             {
                 return;
+            }
+
+            foreach (KeyValuePair<int, SourceState> pair in sources)
+            {
+                ReleaseSourceBit(pair.Value);
             }
 
             sources.Clear();
@@ -116,12 +125,15 @@ namespace VIRTOSHA.ZAnatomy.Clipping
         private void Awake()
         {
             EnsurePropertyIDs();
+            EnsurePropertyBlock();
             ClearGlobals();
+            ClearAllTargetMasks();
         }
 
         private void OnEnable()
         {
             EnsurePropertyIDs();
+            EnsurePropertyBlock();
             isDirty = true;
             ApplyIfDirty();
         }
@@ -136,6 +148,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             currentMergedCount = 0;
             registeredSourceCount = 0;
             ClearGlobals();
+            ClearAllTargetMasks();
         }
 
         private void EnsurePropertyIDs()
@@ -148,7 +161,77 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             stampEnabledID = Shader.PropertyToID(StampEnabledProperty);
             stampCountID = Shader.PropertyToID(StampCountProperty);
             stampWorldToLocalID = Shader.PropertyToID(StampWorldToLocalProperty);
+            stampSourceIndexID = Shader.PropertyToID(StampSourceIndexProperty);
+            stampSourceMaskID = Shader.PropertyToID(StampSourceMaskProperty);
             propertyIdsInitialized = true;
+        }
+
+        private void SetSourceStateInternal(
+            Object sourceOwner,
+            IReadOnlyList<Matrix4x4> matrices,
+            IReadOnlyList<Renderer> targetRenderers,
+            IReadOnlyList<Material> targetMaterials,
+            bool updateMatrices,
+            bool updateTargets)
+        {
+            if (sourceOwner == null)
+            {
+                Debug.LogWarning($"[{nameof(StampClipCoordinator)}:{name}] Ignored source update with null source owner.", this);
+                return;
+            }
+
+            int sourceId = sourceOwner.GetInstanceID();
+            if (!sources.TryGetValue(sourceId, out SourceState state))
+            {
+                state = new SourceState(sourceOwner);
+                sources[sourceId] = state;
+            }
+
+            if (updateMatrices)
+            {
+                state.Matrices.Clear();
+                if (matrices != null)
+                {
+                    for (int i = 0; i < matrices.Count; i++)
+                    {
+                        state.Matrices.Add(matrices[i]);
+                    }
+                }
+            }
+
+            if (updateTargets)
+            {
+                CopyTargets(state.TargetRenderers, targetRenderers);
+                CopyTargets(state.TargetMaterials, targetMaterials);
+            }
+
+            if (state.Matrices.Count == 0 && state.TargetRenderers.Count == 0 && state.TargetMaterials.Count == 0)
+            {
+                ReleaseSourceBit(state);
+                sources.Remove(sourceId);
+                LogDebug($"Removed source '{sourceOwner.name}' because it has no matrices and no targets.");
+                isDirty = true;
+                return;
+            }
+
+            bool needsSourceBit = state.TargetRenderers.Count > 0 || state.TargetMaterials.Count > 0;
+            if (needsSourceBit)
+            {
+                TryAssignSourceBit(state);
+            }
+            else
+            {
+                ReleaseSourceBit(state);
+            }
+
+            state.Sequence = ++updateSequence;
+            sources[sourceId] = state;
+
+            LogDebug(
+                $"Updated source '{sourceOwner.name}': matrices={state.Matrices.Count}, " +
+                $"renderers={state.TargetRenderers.Count}, materials={state.TargetMaterials.Count}, bit={state.SourceBitIndex}.");
+
+            isDirty = true;
         }
 
         private void ApplyIfDirty()
@@ -161,7 +244,9 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             EnsurePropertyIDs();
             RemoveDestroyedSources();
             BuildMergedMatrices();
+            BuildTargetMasks();
             PublishGlobals();
+            PublishTargetMasks();
             isDirty = false;
         }
 
@@ -171,7 +256,8 @@ namespace VIRTOSHA.ZAnatomy.Clipping
 
             foreach (KeyValuePair<int, SourceState> pair in sources)
             {
-                if (pair.Value.Owner != null)
+                SourceState state = pair.Value;
+                if (state.Owner != null)
                 {
                     continue;
                 }
@@ -187,7 +273,14 @@ namespace VIRTOSHA.ZAnatomy.Clipping
 
             for (int i = 0; i < removeIds.Count; i++)
             {
-                sources.Remove(removeIds[i]);
+                int sourceId = removeIds[i];
+                if (!sources.TryGetValue(sourceId, out SourceState state))
+                {
+                    continue;
+                }
+
+                ReleaseSourceBit(state);
+                sources.Remove(sourceId);
             }
         }
 
@@ -195,6 +288,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
         {
             orderedSources.Clear();
             mergedMatrices.Clear();
+            mergedSourceIndices.Clear();
 
             foreach (KeyValuePair<int, SourceState> pair in sources)
             {
@@ -203,15 +297,34 @@ namespace VIRTOSHA.ZAnatomy.Clipping
 
             orderedSources.Sort((left, right) => left.Sequence.CompareTo(right.Sequence));
 
-            for (int i = 0; i < orderedSources.Count; i++)
+            for (int sourceIndex = 0; sourceIndex < orderedSources.Count; sourceIndex++)
             {
-                List<Matrix4x4> sourceMatrices = orderedSources[i].Matrices;
+                SourceState source = orderedSources[sourceIndex];
+                bool hasTargets = source.TargetRenderers.Count > 0 || source.TargetMaterials.Count > 0;
+                if (!hasTargets)
+                {
+                    // Unscoped sources are intentionally ignored to keep clipping target-scoped only.
+                    continue;
+                }
+
+                if (source.SourceBitIndex < 0)
+                {
+                    // Routing is required for this source but no bit could be assigned.
+                    continue;
+                }
+
+                int publishedSourceIndex = source.SourceBitIndex;
+                List<Matrix4x4> sourceMatrices = source.Matrices;
+
                 for (int matrixIndex = 0; matrixIndex < sourceMatrices.Count; matrixIndex++)
                 {
                     mergedMatrices.Add(sourceMatrices[matrixIndex]);
+                    mergedSourceIndices.Add(publishedSourceIndex);
+
                     if (mergedMatrices.Count > MaxShaderStamps)
                     {
                         mergedMatrices.RemoveAt(0);
+                        mergedSourceIndices.RemoveAt(0);
                     }
                 }
             }
@@ -220,23 +333,244 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             currentMergedCount = mergedMatrices.Count;
         }
 
+        private void BuildTargetMasks()
+        {
+            rendererMasks.Clear();
+            materialMasks.Clear();
+
+            foreach (KeyValuePair<int, SourceState> pair in sources)
+            {
+                SourceState state = pair.Value;
+                if (state.SourceBitIndex < 0 || state.SourceBitIndex >= MaxSourceBits || state.Matrices.Count == 0)
+                {
+                    continue;
+                }
+
+                uint bitMask = 1u << state.SourceBitIndex;
+
+                for (int i = state.TargetRenderers.Count - 1; i >= 0; i--)
+                {
+                    Renderer renderer = state.TargetRenderers[i];
+                    if (renderer == null)
+                    {
+                        state.TargetRenderers.RemoveAt(i);
+                        continue;
+                    }
+
+                    if (rendererMasks.TryGetValue(renderer, out uint currentMask))
+                    {
+                        rendererMasks[renderer] = currentMask | bitMask;
+                    }
+                    else
+                    {
+                        rendererMasks[renderer] = bitMask;
+                    }
+                }
+
+                for (int i = state.TargetMaterials.Count - 1; i >= 0; i--)
+                {
+                    Material material = state.TargetMaterials[i];
+                    if (material == null)
+                    {
+                        state.TargetMaterials.RemoveAt(i);
+                        continue;
+                    }
+
+                    if (materialMasks.TryGetValue(material, out uint currentMask))
+                    {
+                        materialMasks[material] = currentMask | bitMask;
+                    }
+                    else
+                    {
+                        materialMasks[material] = bitMask;
+                    }
+                }
+            }
+
+            ExpandMaterialMasksToRendererMasks();
+        }
+
+        private void ExpandMaterialMasksToRendererMasks()
+        {
+            if (materialMasks.Count == 0)
+            {
+                return;
+            }
+
+            Dictionary<int, uint> unresolvedMaterialMasks = null;
+
+            foreach (KeyValuePair<Material, uint> pair in materialMasks)
+            {
+                Material material = pair.Key;
+                if (material == null || material.HasProperty(stampSourceMaskID))
+                {
+                    continue;
+                }
+
+                unresolvedMaterialMasks ??= new Dictionary<int, uint>();
+
+                int materialId = material.GetInstanceID();
+                if (unresolvedMaterialMasks.TryGetValue(materialId, out uint existingMask))
+                {
+                    unresolvedMaterialMasks[materialId] = existingMask | pair.Value;
+                }
+                else
+                {
+                    unresolvedMaterialMasks[materialId] = pair.Value;
+                }
+            }
+
+            if (unresolvedMaterialMasks == null || unresolvedMaterialMasks.Count == 0)
+            {
+                return;
+            }
+
+            Renderer[] sceneRenderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+            for (int i = 0; i < sceneRenderers.Length; i++)
+            {
+                Renderer renderer = sceneRenderers[i];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                Material[] sharedMaterials = renderer.sharedMaterials;
+                if (sharedMaterials == null || sharedMaterials.Length == 0)
+                {
+                    continue;
+                }
+
+                uint routedMask = 0u;
+                for (int materialIndex = 0; materialIndex < sharedMaterials.Length; materialIndex++)
+                {
+                    Material sharedMaterial = sharedMaterials[materialIndex];
+                    if (sharedMaterial == null)
+                    {
+                        continue;
+                    }
+
+                    if (unresolvedMaterialMasks.TryGetValue(sharedMaterial.GetInstanceID(), out uint materialMask))
+                    {
+                        routedMask |= materialMask;
+                    }
+                }
+
+                if (routedMask == 0u)
+                {
+                    continue;
+                }
+
+                if (rendererMasks.TryGetValue(renderer, out uint existingRendererMask))
+                {
+                    rendererMasks[renderer] = existingRendererMask | routedMask;
+                }
+                else
+                {
+                    rendererMasks[renderer] = routedMask;
+                }
+            }
+        }
+
         private void PublishGlobals()
         {
             for (int i = 0; i < MaxShaderStamps; i++)
             {
                 matrixBuffer[i] = Matrix4x4.identity;
+                sourceIndexBuffer[i] = -1.0f;
             }
 
             for (int i = 0; i < mergedMatrices.Count; i++)
             {
                 matrixBuffer[i] = mergedMatrices[i];
+                sourceIndexBuffer[i] = mergedSourceIndices[i];
             }
 
+            // Default for all untargeted materials/renderers.
+            Shader.SetGlobalInt(stampSourceMaskID, 0);
             Shader.SetGlobalFloat(stampEnabledID, currentMergedCount > 0 ? 1.0f : 0.0f);
             Shader.SetGlobalFloat(stampCountID, currentMergedCount);
             Shader.SetGlobalMatrixArray(stampWorldToLocalID, matrixBuffer);
+            Shader.SetGlobalFloatArray(stampSourceIndexID, sourceIndexBuffer);
 
             LogDebug($"Published globals: sources={registeredSourceCount}, count={currentMergedCount}.");
+        }
+
+        private void PublishTargetMasks()
+        {
+            foreach (Renderer renderer in lastAppliedRenderers)
+            {
+                if (renderer == null || rendererMasks.ContainsKey(renderer))
+                {
+                    continue;
+                }
+
+                SetRendererMask(renderer, 0u);
+            }
+
+            foreach (Material material in lastAppliedMaterials)
+            {
+                if (material == null || materialMasks.ContainsKey(material))
+                {
+                    continue;
+                }
+
+                TrySetMaterialMask(material, 0u);
+            }
+
+            foreach (KeyValuePair<Renderer, uint> pair in rendererMasks)
+            {
+                if (pair.Key == null)
+                {
+                    continue;
+                }
+
+                SetRendererMask(pair.Key, pair.Value);
+            }
+
+            foreach (KeyValuePair<Material, uint> pair in materialMasks)
+            {
+                if (pair.Key == null)
+                {
+                    continue;
+                }
+
+                TrySetMaterialMask(pair.Key, pair.Value);
+            }
+
+            lastAppliedRenderers.Clear();
+            foreach (Renderer renderer in rendererMasks.Keys)
+            {
+                if (renderer != null)
+                {
+                    lastAppliedRenderers.Add(renderer);
+                }
+            }
+
+            lastAppliedMaterials.Clear();
+            foreach (Material material in materialMasks.Keys)
+            {
+                if (material != null)
+                {
+                    lastAppliedMaterials.Add(material);
+                }
+            }
+        }
+
+        private void SetRendererMask(Renderer renderer, uint mask)
+        {
+            EnsurePropertyBlock();
+            propertyBlock.Clear();
+            renderer.GetPropertyBlock(propertyBlock);
+            propertyBlock.SetInt(stampSourceMaskID, unchecked((int)mask));
+            renderer.SetPropertyBlock(propertyBlock);
+        }
+
+        private void EnsurePropertyBlock()
+        {
+            if (propertyBlock == null)
+            {
+                propertyBlock = new MaterialPropertyBlock();
+            }
         }
 
         private void ClearGlobals()
@@ -246,11 +580,131 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             for (int i = 0; i < MaxShaderStamps; i++)
             {
                 matrixBuffer[i] = Matrix4x4.identity;
+                sourceIndexBuffer[i] = -1.0f;
             }
 
+            Shader.SetGlobalInt(stampSourceMaskID, 0);
             Shader.SetGlobalFloat(stampEnabledID, 0.0f);
             Shader.SetGlobalFloat(stampCountID, 0.0f);
             Shader.SetGlobalMatrixArray(stampWorldToLocalID, matrixBuffer);
+            Shader.SetGlobalFloatArray(stampSourceIndexID, sourceIndexBuffer);
+        }
+
+        private void ClearAllTargetMasks()
+        {
+            foreach (Renderer renderer in lastAppliedRenderers)
+            {
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                SetRendererMask(renderer, 0u);
+            }
+
+            foreach (Material material in lastAppliedMaterials)
+            {
+                if (material == null)
+                {
+                    continue;
+                }
+
+                TrySetMaterialMask(material, 0u);
+            }
+
+            lastAppliedRenderers.Clear();
+            lastAppliedMaterials.Clear();
+            rendererMasks.Clear();
+            materialMasks.Clear();
+        }
+
+        private bool TryAssignSourceBit(SourceState state)
+        {
+            if (state.SourceBitIndex >= 0 && state.SourceBitIndex < MaxSourceBits)
+            {
+                return true;
+            }
+
+            for (int bit = 0; bit < MaxSourceBits; bit++)
+            {
+                if (usedSourceBits[bit])
+                {
+                    continue;
+                }
+
+                usedSourceBits[bit] = true;
+                state.SourceBitIndex = bit;
+                state.OverflowWarningLogged = false;
+                return true;
+            }
+
+            state.SourceBitIndex = -1;
+            if (!state.OverflowWarningLogged)
+            {
+                Debug.LogWarning(
+                    $"[{nameof(StampClipCoordinator)}:{name}] Maximum routed sources ({MaxSourceBits}) reached. " +
+                    $"Source '{state.Owner?.name}' will not receive a source bit.",
+                    this);
+                state.OverflowWarningLogged = true;
+            }
+
+            return false;
+        }
+
+        private void ReleaseSourceBit(SourceState state)
+        {
+            if (state.SourceBitIndex < 0 || state.SourceBitIndex >= MaxSourceBits)
+            {
+                state.SourceBitIndex = -1;
+                return;
+            }
+
+            usedSourceBits[state.SourceBitIndex] = false;
+            state.SourceBitIndex = -1;
+            state.OverflowWarningLogged = false;
+        }
+
+        private static void CopyTargets<T>(List<T> destination, IReadOnlyList<T> source) where T : Object
+        {
+            destination.Clear();
+            if (source == null)
+            {
+                return;
+            }
+
+            HashSet<int> seen = new HashSet<int>();
+            for (int i = 0; i < source.Count; i++)
+            {
+                T item = source[i];
+                if (item == null)
+                {
+                    continue;
+                }
+
+                int instanceId = item.GetInstanceID();
+                if (seen.Add(instanceId))
+                {
+                    destination.Add(item);
+                }
+            }
+        }
+
+        private void TrySetMaterialMask(Material material, uint mask)
+        {
+            if (!material.HasProperty(stampSourceMaskID))
+            {
+                int materialId = material.GetInstanceID();
+                if (warnedMaterialsMissingMaskProperty.Add(materialId))
+                {
+                    LogDebug(
+                        $"Material '{material.name}' does not expose '{StampSourceMaskProperty}'. " +
+                        "Skipping material-level source mask write.");
+                }
+
+                return;
+            }
+
+            material.SetInt(stampSourceMaskID, unchecked((int)mask));
         }
 
         private void LogDebug(string message)
@@ -264,7 +718,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
         }
 
         /// <summary>
-        /// Per-source cached matrix payload and recency sequence for merge ordering.
+        /// Per-source cached payload and recency sequence for merge ordering.
         /// </summary>
         private sealed class SourceState
         {
@@ -275,7 +729,12 @@ namespace VIRTOSHA.ZAnatomy.Clipping
 
             public Object Owner { get; }
             public List<Matrix4x4> Matrices { get; } = new List<Matrix4x4>();
+            public List<Renderer> TargetRenderers { get; } = new List<Renderer>();
+            public List<Material> TargetMaterials { get; } = new List<Material>();
+
+            public int SourceBitIndex { get; set; } = -1;
             public long Sequence { get; set; }
+            public bool OverflowWarningLogged { get; set; }
         }
     }
 }

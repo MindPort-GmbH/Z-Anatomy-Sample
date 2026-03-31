@@ -11,8 +11,8 @@ namespace VIRTOSHA.ZAnatomy.Clipping
     /// Stamps remain active until <see cref="ResetClipping"/> is called.
     /// </summary>
     [DisallowMultipleComponent]
-    [AddComponentMenu("VIRTOSHA/Z-Anatomy/Persistent Stamp Clipper")]
-    public class PersistentStampClipper : MonoBehaviour
+    [AddComponentMenu("VIRTOSHA/Z-Anatomy/Stamp Clip Source Persistent Clipper Layer Filtering")]
+    public class PersistentStampClipperLayerFiltering : MonoBehaviour
     {
         private const int MaxShaderStamps = 64;
 
@@ -73,7 +73,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
         private bool stampOnTriggerStay = true;
 
         [Header("Debug")]
-        [SerializeField, Tooltip("Enables PersistentStampClipper diagnostic logs in the Unity Console.")]
+        [SerializeField, Tooltip("Enables PersistentStampClipperLayerFiltering diagnostic logs in the Unity Console.")]
         private bool debugLogs = true;
 
         [SerializeField, Tooltip("Adds verbose trigger-level logs for overlap filtering and registration.")]
@@ -211,7 +211,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             Collider cutterCollider = GetComponent<Collider>();
             if (cutterCollider == null)
             {
-                LogDebugWarning("CollectCurrentIntersections: missing Collider on PersistentStampClipper.");
+                LogDebugWarning("CollectCurrentIntersections: missing Collider on PersistentStampClipperLayerFiltering.");
                 registeredCount = 0;
                 return 0;
             }
@@ -331,7 +331,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             {
                 if (logDetails)
                 {
-                    LogDebug($"Skipped collider '{other.name}': belongs to PersistentStampClipper hierarchy.");
+                    LogDebug($"Skipped collider '{other.name}': belongs to PersistentStampClipperLayerFiltering hierarchy.");
                 }
 
                 return false;
@@ -379,6 +379,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
                 return false;
             }
 
+            bool targetsChanged = false;
             bool rendererIsListed = renderers.Contains(renderer);
             Material[] sharedRendererMaterials = renderer.sharedMaterials;
             List<Material> matchedConfiguredMaterials = null;
@@ -416,6 +417,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
                 if (observedRendererSet.Add(renderer))
                 {
                     observedRenderers.Add(renderer);
+                    targetsChanged = true;
                     if (logDetails)
                     {
                         LogDebug($"Renderer accepted via renderers list: '{renderer.name}'.");
@@ -433,11 +435,17 @@ namespace VIRTOSHA.ZAnatomy.Clipping
                     if (observedMaterialSet.Add(material))
                     {
                         observedMaterials.Add(material);
+                        targetsChanged = true;
                         if (logDetails)
                         {
                             LogDebug($"Material registered from listed renderer: '{material.name}' on renderer '{renderer.name}'.");
                         }
                     }
+                }
+
+                if (targetsChanged && sphereStampWorldToLocalMatrices.Count > 0)
+                {
+                    PushStampStateToCoordinator();
                 }
 
                 return true;
@@ -449,6 +457,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
                 if (observedMaterialSet.Add(material))
                 {
                     observedMaterials.Add(material);
+                    targetsChanged = true;
                     if (logDetails)
                     {
                         LogDebug($"Material accepted via materials list: '{material.name}' on renderer '{renderer.name}'.");
@@ -459,6 +468,11 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             if (logDetails)
             {
                 LogDebug($"Renderer accepted via material match only: '{renderer.name}', matches={matchedConfiguredMaterials.Count}.");
+            }
+
+            if (targetsChanged && sphereStampWorldToLocalMatrices.Count > 0)
+            {
+                PushStampStateToCoordinator();
             }
 
             return true;
@@ -560,8 +574,8 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             hasLastStampPose = true;
             lastStampPosition = transform.position;
             lastStampRotation = transform.rotation;
-
             PushStampStateToCoordinator();
+
             LogDebug($"CaptureStamp: added stamp at position={transform.position}, rotation={transform.rotation.eulerAngles}, count={currentStampCount}.");
         }
 
@@ -570,7 +584,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             Collider cutterCollider = GetComponent<Collider>();
             if (cutterCollider == null)
             {
-                LogDebugWarning("PersistentStampClipper requires a Collider for trigger or overlap detection.");
+                LogDebugWarning("PersistentStampClipperLayerFiltering requires a Collider for trigger or overlap detection.");
                 return;
             }
 
@@ -625,7 +639,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             }
             else
             {
-                coordinator.SetSourceMatrices(this, sphereStampWorldToLocalMatrices);
+                coordinator.SetSourceState(this, sphereStampWorldToLocalMatrices, observedRenderers, observedMaterials);
             }
 
             LogDebug($"Published to coordinator: stampCount={currentStampCount}.");
@@ -662,7 +676,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
 
             if (!missingCoordinatorWarningLogged)
             {
-                Debug.LogWarning($"[{nameof(PersistentStampClipper)}:{name}] Missing {nameof(StampClipCoordinator)} reference.", this);
+                Debug.LogWarning($"[{nameof(PersistentStampClipperLayerFiltering)}:{name}] Missing {nameof(StampClipCoordinator)} reference.", this);
                 missingCoordinatorWarningLogged = true;
             }
 
@@ -676,7 +690,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
                 return;
             }
 
-            Debug.Log($"[{nameof(PersistentStampClipper)}:{name}] {message}", this);
+            Debug.Log($"[{nameof(PersistentStampClipperLayerFiltering)}:{name}] {message}", this);
         }
 
         private void LogDebugWarning(string message)
@@ -686,7 +700,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
                 return;
             }
 
-            Debug.LogWarning($"[{nameof(PersistentStampClipper)}:{name}] {message}", this);
+            Debug.LogWarning($"[{nameof(PersistentStampClipperLayerFiltering)}:{name}] {message}", this);
         }
     }
 }

@@ -8,6 +8,8 @@
 float _StampClipEnabled;
 float _SphereStampCount;
 float4x4 _SphereStampWorldToLocal[MAX_SPHERE_STAMPS];
+float _SphereStampSourceIndex[MAX_SPHERE_STAMPS];
+int _StampClipSourceMask;
 
 inline float IsInsideStampSphere(float3 stampLocalPosition)
 {
@@ -50,6 +52,12 @@ void StampClipSpehereClip_float(float3 worldPosition, out float clipThreshold, o
         return;
     }
 
+    uint sourceMask = asuint(_StampClipSourceMask);
+    if (sourceMask == 0u)
+    {
+        return;
+    }
+
     float edgeMask = 0.0;
 
     [loop]
@@ -61,6 +69,18 @@ void StampClipSpehereClip_float(float3 worldPosition, out float clipThreshold, o
         }
 
         float4x4 worldToLocal = _SphereStampWorldToLocal[i];
+        int sourceIndex = (int)_SphereStampSourceIndex[i];
+        if (sourceIndex < 0 || sourceIndex >= 32)
+        {
+            continue;
+        }
+
+        uint sourceBit = 1u << sourceIndex;
+        if ((sourceMask & sourceBit) == 0u)
+        {
+            continue;
+        }
+
         float3 stampLocalPosition = mul(worldToLocal, float4(worldPosition, 1.0)).xyz;
         float distanceToCenter = length(stampLocalPosition);
         float signedDistanceToBoundary = distanceToCenter - kSphereRadius;
