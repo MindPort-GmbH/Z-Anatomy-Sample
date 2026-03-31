@@ -7,7 +7,6 @@ namespace VIRTOSHA.ZAnatomy.Clipping
     /// <summary>
     /// Shared configuration and coordinator helpers for stamp clip sources.
     /// </summary>
-    [ExecuteAlways]
     public abstract class StampClipSourceBase : MonoBehaviour
     {
         [Header("Coordination")]
