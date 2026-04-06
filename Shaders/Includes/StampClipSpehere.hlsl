@@ -1,3 +1,12 @@
+// StampClipSpehere.hlsl
+// Top-level behavior:
+// - Each stamp source GameObject provides transform.worldToLocalMatrix,
+//   which reflects the source Transform (position, rotation, and scale).
+// - For each pixel, the shader transforms its world position into the stamp's local space.
+// - If that transformed local position lies inside a sphere centered at (0,0,0)
+//   with radius 0.5, the pixel is clipped.
+// - In Unity, this can be visualized with a default Sphere mesh on the source GameObject (MeshFilter).
+
 #ifndef VIRTOSHA_STAMP_CLIP_SPEHERE_INCLUDED
 #define VIRTOSHA_STAMP_CLIP_SPEHERE_INCLUDED
 
