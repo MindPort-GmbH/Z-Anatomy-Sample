@@ -149,36 +149,6 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             }
         }
 
-        private int CollectCurrentIntersections(bool logDetails, out int registeredCount)
-        {
-            Collider cutterCollider = GetComponent<Collider>();
-            if (cutterCollider == null)
-            {
-                LogDebugWarning("CollectCurrentIntersections: missing Collider on StampClipSourcePersistentClipper.");
-                registeredCount = 0;
-                return 0;
-            }
-
-            Collider[] overlaps = CollectOverlapsForCollider(cutterCollider);
-            registeredCount = 0;
-            for (int i = 0; i < overlaps.Length; i++)
-            {
-                if (TryRegisterColliderAsTarget(overlaps[i], logDetails))
-                {
-                    registeredCount++;
-                }
-            }
-
-            if (logDetails)
-            {
-                LogDebug(
-                    $"CollectCurrentIntersections: overlaps={overlaps.Length}, registered={registeredCount}, " +
-                    $"trackedRenderers={observedRenderers.Count}, trackedMaterials={observedMaterials.Count}.");
-            }
-
-            return overlaps.Length;
-        }
-
         private Collider[] CollectOverlapsForCollider(Collider cutterCollider)
         {
             if (cutterCollider is BoxCollider box)
