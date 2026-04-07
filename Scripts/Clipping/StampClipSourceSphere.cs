@@ -38,15 +38,6 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             ClearCoordinatorSource();
         }
 
-        private void OnValidate()
-        {
-            EnsureCoordinatorReference();
-            if (enabled && gameObject.activeInHierarchy)
-            {
-                PublishSourceState(force: true);
-            }
-        }
-
         protected void OnDrawGizmosSelected()
         {
             if (!enabled)

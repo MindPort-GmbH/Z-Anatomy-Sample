@@ -54,6 +54,11 @@ namespace VIRTOSHA.ZAnatomy.Clipping
         private readonly HashSet<int> dedupeIds = new HashSet<int>();
         private bool missingCoordinatorWarningLogged;
 
+        protected virtual void Awake()
+        {
+            EnsureCoordinatorReference();
+        }
+
         protected virtual void Update()
         {
             if (!ShouldSync())

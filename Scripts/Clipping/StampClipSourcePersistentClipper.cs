@@ -58,11 +58,6 @@ namespace VIRTOSHA.ZAnatomy.Clipping
 
         public IReadOnlyList<Material> AffectedMaterials => observedMaterials;
 
-        private void Awake()
-        {
-            EnsureCoordinatorReference();
-        }
-
         private void OnEnable()
         {
             EnsureCoordinatorReference();
@@ -92,7 +87,6 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             minStampTranslation = Mathf.Max(0.0f, minStampTranslation);
             minStampRotation = Mathf.Clamp(minStampRotation, 0.0f, 180.0f);
             ValidateCutterColliderConfiguration();
-            EnsureCoordinatorReference();
         }
 
         protected override bool ShouldSync()
