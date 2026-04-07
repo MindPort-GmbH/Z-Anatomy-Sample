@@ -243,6 +243,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
 
             EnsurePropertyIDs();
             RemoveDestroyedSources();
+            RetryAssignUnassignedBits();
             BuildMergedMatrices();
             BuildTargetMasks();
             PublishGlobals();
@@ -331,6 +332,49 @@ namespace VIRTOSHA.ZAnatomy.Clipping
 
             registeredSourceCount = orderedSources.Count;
             currentMergedCount = mergedMatrices.Count;
+        }
+
+        private void RetryAssignUnassignedBits()
+        {
+            bool hasFreeBit = false;
+            for (int bitIndex = 0; bitIndex < MaxSourceBits; bitIndex++)
+            {
+                if (usedSourceBits[bitIndex])
+                {
+                    continue;
+                }
+
+                hasFreeBit = true;
+                break;
+            }
+
+            if (!hasFreeBit)
+            {
+                return;
+            }
+
+            orderedSources.Clear();
+            foreach (KeyValuePair<int, SourceState> pair in sources)
+            {
+                orderedSources.Add(pair.Value);
+            }
+
+            orderedSources.Sort((left, right) => left.Sequence.CompareTo(right.Sequence));
+
+            for (int sourceIndex = 0; sourceIndex < orderedSources.Count; sourceIndex++)
+            {
+                SourceState source = orderedSources[sourceIndex];
+                bool hasTargets = source.TargetRenderers.Count > 0 || source.TargetMaterials.Count > 0;
+                if (!hasTargets || source.SourceBitIndex >= 0)
+                {
+                    continue;
+                }
+
+                if (!TryAssignSourceBit(source))
+                {
+                    break;
+                }
+            }
         }
 
         private void BuildTargetMasks()
