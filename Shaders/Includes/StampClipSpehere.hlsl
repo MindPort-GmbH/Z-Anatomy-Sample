@@ -91,14 +91,16 @@ void StampClipSpehereClip_float(float3 worldPosition, out float clipThreshold, o
         }
 
         float3 stampLocalPosition = mul(worldToLocal, float4(worldPosition, 1.0)).xyz;
-        float distanceToCenter = length(stampLocalPosition);
-        float signedDistanceToBoundary = distanceToCenter - kSphereRadius;
 
         if (IsInsideStampSphere(stampLocalPosition) > 0.5)
         {
             // Alpha clip compares alpha - threshold. With alpha=1 this must exceed 1 to clip.
             clipThreshold = 2.0;
+            return;
         }
+
+        float distanceToCenter = length(stampLocalPosition);
+        float signedDistanceToBoundary = distanceToCenter - kSphereRadius;
 
         // Convert constant world-space edge width to local-space per stamp.
         float localUnitsPerWorldUnit = ComputeLocalUnitsPerWorldUnit(worldToLocal);
