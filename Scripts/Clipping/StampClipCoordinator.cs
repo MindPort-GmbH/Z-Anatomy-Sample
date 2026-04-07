@@ -248,10 +248,10 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             RemoveDestroyedSources();
             RetryAssignUnassignedBits();
             BuildMergedMatrices();
-            BuildTargetMasks();
+            bool removedEmptySources = BuildTargetMasks();
             PublishGlobals();
             PublishTargetMasks();
-            isDirty = false;
+            isDirty = removedEmptySources;
         }
 
         private void RemoveDestroyedSources()
@@ -380,13 +380,15 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             }
         }
 
-        private void BuildTargetMasks()
+        private bool BuildTargetMasks()
         {
             rendererMasks.Clear();
             materialMasks.Clear();
+            List<int> removeSourceIds = null;
 
             foreach (KeyValuePair<int, SourceState> pair in sources)
             {
+                int sourceId = pair.Key;
                 SourceState state = pair.Value;
                 if (state.SourceBitIndex < 0 || state.SourceBitIndex >= MaxSourceBits || state.Matrices.Count == 0)
                 {
@@ -432,7 +434,26 @@ namespace VIRTOSHA.ZAnatomy.Clipping
                         materialMasks[material] = bitMask;
                     }
                 }
+
+                if (state.TargetRenderers.Count == 0 && state.TargetMaterials.Count == 0)
+                {
+                    ReleaseSourceBit(state);
+                    removeSourceIds ??= new List<int>();
+                    removeSourceIds.Add(sourceId);
+                }
             }
+
+            if (removeSourceIds == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < removeSourceIds.Count; i++)
+            {
+                sources.Remove(removeSourceIds[i]);
+            }
+
+            return true;
         }
 
         private void PublishGlobals()
@@ -469,7 +490,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
                     continue;
                 }
 
-                SetRendererMask(renderer, 0u);
+                ClearRendererMask(renderer);
             }
 
             foreach (Material material in lastAppliedMaterials)
@@ -489,7 +510,8 @@ namespace VIRTOSHA.ZAnatomy.Clipping
                     continue;
                 }
 
-                SetRendererMask(pair.Key, pair.Value);
+                uint effectiveRendererMask = pair.Value | GetMaterialMaskForRenderer(pair.Key);
+                SetRendererMask(pair.Key, effectiveRendererMask);
             }
 
             foreach (KeyValuePair<Material, uint> pair in materialMasks)
@@ -523,6 +545,12 @@ namespace VIRTOSHA.ZAnatomy.Clipping
 
         private void SetRendererMask(Renderer renderer, uint mask)
         {
+            if (mask == 0u)
+            {
+                ClearRendererMask(renderer);
+                return;
+            }
+
             PackSourceMask(mask, out float lowLane, out float highLane);
 
             EnsurePropertyBlock();
@@ -531,6 +559,28 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             propertyBlock.SetFloat(stampSourceMaskLowID, lowLane);
             propertyBlock.SetFloat(stampSourceMaskHighID, highLane);
             renderer.SetPropertyBlock(propertyBlock);
+        }
+
+        private void ClearRendererMask(Renderer renderer)
+        {
+            renderer.SetPropertyBlock(null);
+        }
+
+        private uint GetMaterialMaskForRenderer(Renderer renderer)
+        {
+            Material[] sharedMaterials = renderer.sharedMaterials;
+            uint materialMask = 0u;
+
+            for (int i = 0; i < sharedMaterials.Length; i++)
+            {
+                Material material = sharedMaterials[i];
+                if (material != null && materialMasks.TryGetValue(material, out uint mask))
+                {
+                    materialMask |= mask;
+                }
+            }
+
+            return materialMask;
         }
 
         private void EnsurePropertyBlock()
@@ -568,7 +618,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
                     continue;
                 }
 
-                SetRendererMask(renderer, 0u);
+                ClearRendererMask(renderer);
             }
 
             foreach (Material material in lastAppliedMaterials)
