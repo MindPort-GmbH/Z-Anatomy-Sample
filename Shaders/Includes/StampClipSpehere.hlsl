@@ -18,7 +18,6 @@ float _StampClipEnabled;
 float _SphereStampCount;
 float4x4 _SphereStampWorldToLocal[MAX_SPHERE_STAMPS];
 float _SphereStampSourceIndex[MAX_SPHERE_STAMPS];
-int _StampClipSourceMask;
 
 inline float IsInsideStampSphere(float3 stampLocalPosition)
 {
@@ -61,7 +60,8 @@ void StampClipSpehereClip_float(float3 worldPosition, out float clipThreshold, o
         return;
     }
 
-    uint sourceMask = asuint(_StampClipSourceMask);
+    // Shader Graph exposes this property as Float; convert numerically, do not reinterpret bits.
+    uint sourceMask = (uint)max(_StampClipSourceMask, 0.0);
     if (sourceMask == 0u)
     {
         return;

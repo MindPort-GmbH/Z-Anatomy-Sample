@@ -202,7 +202,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             if (updateTargets)
             {
                 CopyTargets(state.TargetRenderers, targetRenderers);
-                CopyTargets(state.TargetMaterials, targetMaterials);
+                CopyValidTargetMaterials(sourceOwner, state.TargetMaterials, targetMaterials);
             }
 
             if (state.Matrices.Count == 0 && state.TargetRenderers.Count == 0 && state.TargetMaterials.Count == 0)
@@ -430,89 +430,6 @@ namespace VIRTOSHA.ZAnatomy.Clipping
                     }
                 }
             }
-
-            ExpandMaterialMasksToRendererMasks();
-        }
-
-        private void ExpandMaterialMasksToRendererMasks()
-        {
-            if (materialMasks.Count == 0)
-            {
-                return;
-            }
-
-            Dictionary<int, uint> unresolvedMaterialMasks = null;
-
-            foreach (KeyValuePair<Material, uint> pair in materialMasks)
-            {
-                Material material = pair.Key;
-                if (material == null || material.HasProperty(stampSourceMaskID))
-                {
-                    continue;
-                }
-
-                unresolvedMaterialMasks ??= new Dictionary<int, uint>();
-
-                int materialId = material.GetInstanceID();
-                if (unresolvedMaterialMasks.TryGetValue(materialId, out uint existingMask))
-                {
-                    unresolvedMaterialMasks[materialId] = existingMask | pair.Value;
-                }
-                else
-                {
-                    unresolvedMaterialMasks[materialId] = pair.Value;
-                }
-            }
-
-            if (unresolvedMaterialMasks == null || unresolvedMaterialMasks.Count == 0)
-            {
-                return;
-            }
-
-            Renderer[] sceneRenderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
-            for (int i = 0; i < sceneRenderers.Length; i++)
-            {
-                Renderer renderer = sceneRenderers[i];
-                if (renderer == null)
-                {
-                    continue;
-                }
-
-                Material[] sharedMaterials = renderer.sharedMaterials;
-                if (sharedMaterials == null || sharedMaterials.Length == 0)
-                {
-                    continue;
-                }
-
-                uint routedMask = 0u;
-                for (int materialIndex = 0; materialIndex < sharedMaterials.Length; materialIndex++)
-                {
-                    Material sharedMaterial = sharedMaterials[materialIndex];
-                    if (sharedMaterial == null)
-                    {
-                        continue;
-                    }
-
-                    if (unresolvedMaterialMasks.TryGetValue(sharedMaterial.GetInstanceID(), out uint materialMask))
-                    {
-                        routedMask |= materialMask;
-                    }
-                }
-
-                if (routedMask == 0u)
-                {
-                    continue;
-                }
-
-                if (rendererMasks.TryGetValue(renderer, out uint existingRendererMask))
-                {
-                    rendererMasks[renderer] = existingRendererMask | routedMask;
-                }
-                else
-                {
-                    rendererMasks[renderer] = routedMask;
-                }
-            }
         }
 
         private void PublishGlobals()
@@ -530,7 +447,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             }
 
             // Default for all untargeted materials/renderers.
-            Shader.SetGlobalInt(stampSourceMaskID, 0);
+            Shader.SetGlobalFloat(stampSourceMaskID, 0.0f);
             Shader.SetGlobalFloat(stampEnabledID, currentMergedCount > 0 ? 1.0f : 0.0f);
             Shader.SetGlobalFloat(stampCountID, currentMergedCount);
             Shader.SetGlobalMatrixArray(stampWorldToLocalID, matrixBuffer);
@@ -605,7 +522,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             EnsurePropertyBlock();
             propertyBlock.Clear();
             renderer.GetPropertyBlock(propertyBlock);
-            propertyBlock.SetInt(stampSourceMaskID, unchecked((int)mask));
+            propertyBlock.SetFloat(stampSourceMaskID, mask);
             renderer.SetPropertyBlock(propertyBlock);
         }
 
@@ -627,7 +544,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
                 sourceIndexBuffer[i] = -1.0f;
             }
 
-            Shader.SetGlobalInt(stampSourceMaskID, 0);
+            Shader.SetGlobalFloat(stampSourceMaskID, 0.0f);
             Shader.SetGlobalFloat(stampEnabledID, 0.0f);
             Shader.SetGlobalFloat(stampCountID, 0.0f);
             Shader.SetGlobalMatrixArray(stampWorldToLocalID, matrixBuffer);
@@ -733,6 +650,50 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             }
         }
 
+        private void CopyValidTargetMaterials(
+            Object sourceOwner,
+            List<Material> destination,
+            IReadOnlyList<Material> source)
+        {
+            destination.Clear();
+            if (source == null)
+            {
+                return;
+            }
+
+            EnsurePropertyIDs();
+
+            HashSet<int> seen = new HashSet<int>();
+            for (int i = 0; i < source.Count; i++)
+            {
+                Material material = source[i];
+                if (material == null)
+                {
+                    continue;
+                }
+
+                int materialId = material.GetInstanceID();
+                if (!material.HasProperty(stampSourceMaskID))
+                {
+                    if (warnedMaterialsMissingMaskProperty.Add(materialId))
+                    {
+                        string ownerName = sourceOwner != null ? sourceOwner.name : "null";
+                        Debug.LogError(
+                            $"[{nameof(StampClipCoordinator)}:{name}] Source '{ownerName}' targeted material '{material.name}' " +
+                            $"without required '{StampSourceMaskProperty}'. Material target is ignored.",
+                            this);
+                    }
+
+                    continue;
+                }
+
+                if (seen.Add(materialId))
+                {
+                    destination.Add(material);
+                }
+            }
+        }
+
         private void TrySetMaterialMask(Material material, uint mask)
         {
             if (!material.HasProperty(stampSourceMaskID))
@@ -740,15 +701,16 @@ namespace VIRTOSHA.ZAnatomy.Clipping
                 int materialId = material.GetInstanceID();
                 if (warnedMaterialsMissingMaskProperty.Add(materialId))
                 {
-                    LogDebug(
-                        $"Material '{material.name}' does not expose '{StampSourceMaskProperty}'. " +
-                        "Skipping material-level source mask write.");
+                    Debug.LogError(
+                        $"[{nameof(StampClipCoordinator)}:{name}] Material '{material.name}' does not expose required " +
+                        $"'{StampSourceMaskProperty}'. Mask write is skipped.",
+                        this);
                 }
 
                 return;
             }
 
-            material.SetInt(stampSourceMaskID, unchecked((int)mask));
+            material.SetFloat(stampSourceMaskID, mask);
         }
 
         private void LogDebug(string message)
