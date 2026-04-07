@@ -62,7 +62,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
         {
             EnsureCoordinatorReference();
             RebuildSetsFromLists();
-            ValidateCutterColliderConfiguration();
+            ValidateColliderConfiguration();
             PushStampStateToCoordinator();
         }
 
@@ -86,7 +86,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             maxStamps = Mathf.Clamp(maxStamps, 1, MaxShaderStamps);
             minStampTranslation = Mathf.Max(0.0f, minStampTranslation);
             minStampRotation = Mathf.Clamp(minStampRotation, 0.0f, 180.0f);
-            ValidateCutterColliderConfiguration();
+            ValidateColliderConfiguration();
         }
 
         protected override bool ShouldSync()
@@ -517,26 +517,62 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             LogDebug($"CaptureStamp: added stamp at position={transform.position}, rotation={transform.rotation.eulerAngles}, count={currentStampCount}.");
         }
 
-        private void ValidateCutterColliderConfiguration()
+        private void ValidateColliderConfiguration()
         {
-            Collider cutterCollider = GetComponent<Collider>();
-            if (cutterCollider == null)
+            Collider collider = GetComponent<Collider>();
+            if (collider == null)
             {
                 LogDebugWarning("StampClipSourcePersistentClipper requires a Collider for collision or overlap detection.");
                 return;
             }
 
-            if (!cutterCollider.isTrigger)
+            Rigidbody rb = GetComponent<Rigidbody>();
+            if (rb == null)
             {
-                LogDebugWarning(
-                    $"Collider '{cutterCollider.GetType().Name}' must run in trigger-only mode for {nameof(StampClipSourcePersistentClipper)}. " +
-                    "Auto-setting Collider.isTrigger=true.");
-                cutterCollider.isTrigger = true;
+                LogDebugWarning("StampClipSourcePersistentClipper requires a Rigidbody for trigger callbacks.");
+                return;
             }
 
-            if (cutterCollider is MeshCollider meshCollider && meshCollider.isTrigger && !meshCollider.convex)
+            if (!collider.isTrigger)
             {
-                LogDebugWarning("MeshCollider trigger requires Convex enabled. Trigger callbacks may not fire.");
+                LogDebugWarning(
+                    $"Collider '{collider.GetType().Name}' must run in trigger-only mode for {nameof(StampClipSourcePersistentClipper)}. " +
+                    "Auto-setting Collider.isTrigger=true.");
+                collider.isTrigger = true;
+            }
+
+            if (rb.useGravity)
+            {
+                LogDebugWarning(
+                    $"Rigidbody on '{name}' must disable gravity for {nameof(StampClipSourcePersistentClipper)}. " +
+                    "Auto-setting Rigidbody.useGravity=false.");
+                rb.useGravity = false;
+            }
+
+            if (!rb.isKinematic)
+            {
+                LogDebugWarning(
+                    $"Rigidbody on '{name}' must be kinematic for {nameof(StampClipSourcePersistentClipper)}. " +
+                    "Auto-setting Rigidbody.isKinematic=true.");
+                rb.isKinematic = true;
+            }
+
+            if (collider is MeshCollider meshCollider && meshCollider.isTrigger && !meshCollider.convex)
+            {
+                LogDebugWarning(
+                    "MeshCollider trigger requires Convex enabled for reliable trigger callbacks. " +
+                    "Auto-setting MeshCollider.convex=true.");
+                meshCollider.convex = true;
+
+                if (!meshCollider.convex)
+                {
+                    Debug.LogError(
+                        $"[{nameof(StampClipSourcePersistentClipper)}:{name}] MeshCollider trigger remains non-convex. " +
+                        "Stamping depends on trigger callbacks and cannot run in this state. " +
+                        "Use a convex MeshCollider or switch to a primitive trigger collider.",
+                        this);
+                    enabled = false;
+                }
             }
         }
 
