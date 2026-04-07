@@ -41,6 +41,9 @@
         },
         {
             "m_Id": "c2f83d70146f4ba2ac0fcb3f76dd49cf"
+        },
+        {
+            "m_Id": "d1f52f57581e4a3ea8365f2ecf570a6a"
         }
     ],
     "m_Keywords": [],
@@ -1412,13 +1415,13 @@
     "m_RefNameGeneratedByDisplayName": "PlaneEnabled",
     "m_DefaultReferenceName": "_PlaneEnabled",
     "m_OverrideReferenceName": "",
-    "m_GeneratePropertyBlock": true,
+    "m_GeneratePropertyBlock": false,
     "m_UseCustomSlotLabel": false,
     "m_CustomSlotLabel": "",
     "m_DismissedVersion": 0,
     "m_Precision": 0,
-    "overrideHLSLDeclaration": false,
-    "hlslDeclarationOverride": 0,
+    "overrideHLSLDeclaration": true,
+    "hlslDeclarationOverride": 2,
     "m_Hidden": false,
     "m_PerRendererData": false,
     "m_customAttributes": [],
@@ -1866,8 +1869,8 @@
     "m_ObjectId": "84b6e3e08f85445b9e5a3a9fd95a6328",
     "m_Title": "Cross section",
     "m_Position": {
-        "x": -1540.9998779296875,
-        "y": 787.9999389648438
+        "x": -1541.0,
+        "y": 788.0
     }
 }
 
@@ -2100,12 +2103,6 @@
             "m_Id": "1f3e9fa79b9a45f9b48b8e57abf9f9c8"
         },
         {
-            "m_Id": "0befdcbb57554f3686768d41fac6c39e"
-        },
-        {
-            "m_Id": "3c534c367d8f448a82088f4298b561d0"
-        },
-        {
             "m_Id": "593468358e764da4840c26ba06654d38"
         },
         {
@@ -2124,16 +2121,25 @@
             "m_Id": "46ac7277aca54803827facb739a6fcca"
         },
         {
-            "m_Id": "5368f8f6b9d5414f980e416a85dc2549"
-        },
-        {
             "m_Id": "f990ebd976a4468899f766e19a2ada15"
         },
         {
             "m_Id": "07cf712ea66c4b72b6a914ff82be42d8"
         },
         {
+            "m_Id": "0befdcbb57554f3686768d41fac6c39e"
+        },
+        {
+            "m_Id": "3c534c367d8f448a82088f4298b561d0"
+        },
+        {
+            "m_Id": "5368f8f6b9d5414f980e416a85dc2549"
+        },
+        {
             "m_Id": "c2f83d70146f4ba2ac0fcb3f76dd49cf"
+        },
+        {
+            "m_Id": "d1f52f57581e4a3ea8365f2ecf570a6a"
         }
     ]
 }
@@ -2474,6 +2480,50 @@
 }
 
 {
+    "m_SGVersion": 1,
+    "m_Type": "UnityEditor.ShaderGraph.Internal.Vector1ShaderProperty",
+    "m_ObjectId": "c2f83d70146f4ba2ac0fcb3f76dd49cf",
+    "m_Guid": {
+        "m_GuidSerialized": "3e18f39a-8f17-4cb5-95b0-94b8a1336cb6"
+    },
+    "promotedFromAssetID": "",
+    "promotedFromCategoryName": "",
+    "promotedOrdering": -1,
+    "m_Name": "Stamp Source Mask",
+    "m_DefaultRefNameVersion": 1,
+    "m_RefNameGeneratedByDisplayName": "Stamp Source Mask",
+    "m_DefaultReferenceName": "_StampClipSourceMask",
+    "m_OverrideReferenceName": "",
+    "m_GeneratePropertyBlock": false,
+    "m_UseCustomSlotLabel": false,
+    "m_CustomSlotLabel": "",
+    "m_DismissedVersion": 0,
+    "m_Precision": 0,
+    "overrideHLSLDeclaration": true,
+    "hlslDeclarationOverride": 2,
+    "m_Hidden": false,
+    "m_PerRendererData": false,
+    "m_customAttributes": [],
+    "m_Value": 0.0,
+    "m_FloatType": 0,
+    "m_LiteralFloatMode": false,
+    "m_RangeValues": {
+        "x": 0.0,
+        "y": 1.0
+    },
+    "m_SliderType": 0,
+    "m_SliderPower": 3.0,
+    "m_EnumType": 0,
+    "m_CSharpEnumString": "",
+    "m_EnumNames": [
+        "Default"
+    ],
+    "m_EnumValues": [
+        0
+    ]
+}
+
+{
     "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.DynamicVectorMaterialSlot",
     "m_ObjectId": "c4d1eda45dc0467a9a3d4e8e73379511",
@@ -2561,6 +2611,50 @@
     "m_CustomColors": {
         "m_SerializableColors": []
     }
+}
+
+{
+    "m_SGVersion": 1,
+    "m_Type": "UnityEditor.ShaderGraph.Internal.Vector1ShaderProperty",
+    "m_ObjectId": "d1f52f57581e4a3ea8365f2ecf570a6a",
+    "m_Guid": {
+        "m_GuidSerialized": "6df8c4ec-b164-4b47-830e-8076e1f2e4f2"
+    },
+    "promotedFromAssetID": "",
+    "promotedFromCategoryName": "",
+    "promotedOrdering": -1,
+    "m_Name": "Stamp Source Mask High",
+    "m_DefaultRefNameVersion": 1,
+    "m_RefNameGeneratedByDisplayName": "Stamp Source Mask High",
+    "m_DefaultReferenceName": "_StampClipSourceMaskHigh",
+    "m_OverrideReferenceName": "",
+    "m_GeneratePropertyBlock": false,
+    "m_UseCustomSlotLabel": false,
+    "m_CustomSlotLabel": "",
+    "m_DismissedVersion": 0,
+    "m_Precision": 0,
+    "overrideHLSLDeclaration": true,
+    "hlslDeclarationOverride": 2,
+    "m_Hidden": false,
+    "m_PerRendererData": false,
+    "m_customAttributes": [],
+    "m_Value": 0.0,
+    "m_FloatType": 0,
+    "m_LiteralFloatMode": false,
+    "m_RangeValues": {
+        "x": 0.0,
+        "y": 1.0
+    },
+    "m_SliderType": 0,
+    "m_SliderPower": 3.0,
+    "m_EnumType": 0,
+    "m_CSharpEnumString": "",
+    "m_EnumNames": [
+        "Default"
+    ],
+    "m_EnumValues": [
+        0
+    ]
 }
 
 {
@@ -3106,50 +3200,6 @@
 }
 
 {
-    "m_SGVersion": 1,
-    "m_Type": "UnityEditor.ShaderGraph.Internal.Vector1ShaderProperty",
-    "m_ObjectId": "c2f83d70146f4ba2ac0fcb3f76dd49cf",
-    "m_Guid": {
-        "m_GuidSerialized": "3e18f39a-8f17-4cb5-95b0-94b8a1336cb6"
-    },
-    "promotedFromAssetID": "",
-    "promotedFromCategoryName": "",
-    "promotedOrdering": -1,
-    "m_Name": "Stamp Source Mask",
-    "m_DefaultRefNameVersion": 1,
-    "m_RefNameGeneratedByDisplayName": "Stamp Source Mask",
-    "m_DefaultReferenceName": "_StampClipSourceMask",
-    "m_OverrideReferenceName": "",
-    "m_GeneratePropertyBlock": true,
-    "m_UseCustomSlotLabel": false,
-    "m_CustomSlotLabel": "",
-    "m_DismissedVersion": 0,
-    "m_Precision": 0,
-    "overrideHLSLDeclaration": false,
-    "hlslDeclarationOverride": 0,
-    "m_Hidden": false,
-    "m_PerRendererData": false,
-    "m_customAttributes": [],
-    "m_Value": 0.0,
-    "m_FloatType": 0,
-    "m_LiteralFloatMode": false,
-    "m_RangeValues": {
-        "x": 0.0,
-        "y": 1.0
-    },
-    "m_SliderType": 0,
-    "m_SliderPower": 3.0,
-    "m_EnumType": 0,
-    "m_CSharpEnumString": "",
-    "m_EnumNames": [
-        "Default"
-    ],
-    "m_EnumValues": [
-        0
-    ]
-}
-
-{
     "m_SGVersion": 0,
     "m_Type": "UnityEditor.Rendering.HighDefinition.ShaderGraph.SystemData",
     "m_ObjectId": "ffa18c0a4034434883a23b4ff9448bc2",
@@ -3172,3 +3222,4 @@
     "m_FirstTimeMigrationExecuted": true,
     "inspectorFoldoutMask": 0
 }
+

@@ -20,7 +20,8 @@ namespace VIRTOSHA.ZAnatomy.Clipping
         private const string StampCountProperty = "_SphereStampCount";
         private const string StampWorldToLocalProperty = "_SphereStampWorldToLocal";
         private const string StampSourceIndexProperty = "_SphereStampSourceIndex";
-        private const string StampSourceMaskProperty = "_StampClipSourceMask";
+        private const string StampSourceMaskLowProperty = "_StampClipSourceMask";
+        private const string StampSourceMaskHighProperty = "_StampClipSourceMaskHigh";
 
         [SerializeField, Tooltip("Enables debug logs for source registration and global stamp updates.")]
         private bool debugLogs;
@@ -51,7 +52,8 @@ namespace VIRTOSHA.ZAnatomy.Clipping
         private int stampCountID;
         private int stampWorldToLocalID;
         private int stampSourceIndexID;
-        private int stampSourceMaskID;
+        private int stampSourceMaskLowID;
+        private int stampSourceMaskHighID;
 
         private long updateSequence;
         private bool propertyIdsInitialized;
@@ -162,7 +164,8 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             stampCountID = Shader.PropertyToID(StampCountProperty);
             stampWorldToLocalID = Shader.PropertyToID(StampWorldToLocalProperty);
             stampSourceIndexID = Shader.PropertyToID(StampSourceIndexProperty);
-            stampSourceMaskID = Shader.PropertyToID(StampSourceMaskProperty);
+            stampSourceMaskLowID = Shader.PropertyToID(StampSourceMaskLowProperty);
+            stampSourceMaskHighID = Shader.PropertyToID(StampSourceMaskHighProperty);
             propertyIdsInitialized = true;
         }
 
@@ -447,7 +450,8 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             }
 
             // Default for all untargeted materials/renderers.
-            Shader.SetGlobalFloat(stampSourceMaskID, 0.0f);
+            Shader.SetGlobalFloat(stampSourceMaskLowID, 0.0f);
+            Shader.SetGlobalFloat(stampSourceMaskHighID, 0.0f);
             Shader.SetGlobalFloat(stampEnabledID, currentMergedCount > 0 ? 1.0f : 0.0f);
             Shader.SetGlobalFloat(stampCountID, currentMergedCount);
             Shader.SetGlobalMatrixArray(stampWorldToLocalID, matrixBuffer);
@@ -519,10 +523,13 @@ namespace VIRTOSHA.ZAnatomy.Clipping
 
         private void SetRendererMask(Renderer renderer, uint mask)
         {
+            PackSourceMask(mask, out float lowLane, out float highLane);
+
             EnsurePropertyBlock();
             propertyBlock.Clear();
             renderer.GetPropertyBlock(propertyBlock);
-            propertyBlock.SetFloat(stampSourceMaskID, mask);
+            propertyBlock.SetFloat(stampSourceMaskLowID, lowLane);
+            propertyBlock.SetFloat(stampSourceMaskHighID, highLane);
             renderer.SetPropertyBlock(propertyBlock);
         }
 
@@ -544,7 +551,8 @@ namespace VIRTOSHA.ZAnatomy.Clipping
                 sourceIndexBuffer[i] = -1.0f;
             }
 
-            Shader.SetGlobalFloat(stampSourceMaskID, 0.0f);
+            Shader.SetGlobalFloat(stampSourceMaskLowID, 0.0f);
+            Shader.SetGlobalFloat(stampSourceMaskHighID, 0.0f);
             Shader.SetGlobalFloat(stampEnabledID, 0.0f);
             Shader.SetGlobalFloat(stampCountID, 0.0f);
             Shader.SetGlobalMatrixArray(stampWorldToLocalID, matrixBuffer);
@@ -673,14 +681,15 @@ namespace VIRTOSHA.ZAnatomy.Clipping
                 }
 
                 int materialId = material.GetInstanceID();
-                if (!material.HasProperty(stampSourceMaskID))
+                if (!SupportsStampMaskProperty(material))
                 {
                     if (warnedMaterialsMissingMaskProperty.Add(materialId))
                     {
                         string ownerName = sourceOwner != null ? sourceOwner.name : "null";
                         Debug.LogError(
                             $"[{nameof(StampClipCoordinator)}:{name}] Source '{ownerName}' targeted material '{material.name}' " +
-                            $"without required '{StampSourceMaskProperty}'. Material target is ignored.",
+                            $"without required mask properties '{StampSourceMaskLowProperty}' and '{StampSourceMaskHighProperty}'. " +
+                            "Material target is ignored.",
                             this);
                     }
 
@@ -696,21 +705,37 @@ namespace VIRTOSHA.ZAnatomy.Clipping
 
         private void TrySetMaterialMask(Material material, uint mask)
         {
-            if (!material.HasProperty(stampSourceMaskID))
+            if (!SupportsStampMaskProperty(material))
             {
                 int materialId = material.GetInstanceID();
                 if (warnedMaterialsMissingMaskProperty.Add(materialId))
                 {
                     Debug.LogError(
                         $"[{nameof(StampClipCoordinator)}:{name}] Material '{material.name}' does not expose required " +
-                        $"'{StampSourceMaskProperty}'. Mask write is skipped.",
+                        $"mask properties '{StampSourceMaskLowProperty}' and '{StampSourceMaskHighProperty}'. " +
+                        "Mask write is skipped.",
                         this);
                 }
 
                 return;
             }
 
-            material.SetFloat(stampSourceMaskID, mask);
+            PackSourceMask(mask, out float lowLane, out float highLane);
+            material.SetFloat(stampSourceMaskLowID, lowLane);
+            material.SetFloat(stampSourceMaskHighID, highLane);
+        }
+
+        private bool SupportsStampMaskProperty(Material material)
+        {
+            return material != null &&
+                material.HasProperty(stampSourceMaskLowID) &&
+                material.HasProperty(stampSourceMaskHighID);
+        }
+
+        private static void PackSourceMask(uint mask, out float lowLane, out float highLane)
+        {
+            lowLane = mask & 0xFFFFu;
+            highLane = (mask >> 16) & 0xFFFFu;
         }
 
         private void LogDebug(string message)

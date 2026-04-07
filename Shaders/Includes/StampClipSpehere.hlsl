@@ -39,6 +39,13 @@ inline float ComputeLocalUnitsPerWorldUnit(float4x4 worldToLocal)
     return max((sx + sy + sz) * (1.0 / 3.0), 1e-5);
 }
 
+inline uint DecodePackedSourceMask(float lowLane, float highLane)
+{
+    uint low = ((uint)clamp(round(lowLane), 0.0, 65535.0)) & 0xFFFFu;
+    uint high = ((uint)clamp(round(highLane), 0.0, 65535.0)) & 0xFFFFu;
+    return low | (high << 16);
+}
+
 void StampClipSpehereClip_float(float3 worldPosition, out float clipThreshold, out float3 tintedBaseColor)
 {
     // Sphere radius in stamp-local space.
@@ -60,8 +67,7 @@ void StampClipSpehereClip_float(float3 worldPosition, out float clipThreshold, o
         return;
     }
 
-    // Shader Graph exposes this property as Float; convert numerically, do not reinterpret bits.
-    uint sourceMask = (uint)max(_StampClipSourceMask, 0.0);
+    uint sourceMask = DecodePackedSourceMask(_StampClipSourceMask, _StampClipSourceMaskHigh);
     if (sourceMask == 0u)
     {
         return;

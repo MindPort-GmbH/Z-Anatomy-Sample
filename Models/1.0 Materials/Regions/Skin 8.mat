@@ -171,6 +171,7 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _StampClipSourceMask: 0
+    - _StampClipSourceMaskHigh: 0
     - _StencilRef: 0
     - _StencilRefDepth: 8
     - _StencilRefDistortionVec: 4
