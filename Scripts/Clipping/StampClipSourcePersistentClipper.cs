@@ -91,6 +91,7 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             maxStamps = Mathf.Clamp(maxStamps, 1, MaxShaderStamps);
             minStampTranslation = Mathf.Max(0.0f, minStampTranslation);
             minStampRotation = Mathf.Clamp(minStampRotation, 0.0f, 180.0f);
+            ValidateCutterColliderConfiguration();
             EnsureCoordinatorReference();
         }
 
@@ -529,6 +530,14 @@ namespace VIRTOSHA.ZAnatomy.Clipping
             {
                 LogDebugWarning("StampClipSourcePersistentClipper requires a Collider for collision or overlap detection.");
                 return;
+            }
+
+            if (!cutterCollider.isTrigger)
+            {
+                LogDebugWarning(
+                    $"Collider '{cutterCollider.GetType().Name}' must run in trigger-only mode for {nameof(StampClipSourcePersistentClipper)}. " +
+                    "Auto-setting Collider.isTrigger=true.");
+                cutterCollider.isTrigger = true;
             }
 
             if (cutterCollider is MeshCollider meshCollider && meshCollider.isTrigger && !meshCollider.convex)
