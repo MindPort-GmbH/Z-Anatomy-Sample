@@ -26,7 +26,8 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _CLIPPING_PLANE
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -128,10 +129,10 @@ Material:
     - _BaseColor: {r: 0.46666658, g: 0.85628074, b: 0.945098, a: 0.5882353}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 0}
-    - _PlaneNormal: {r: 0, g: 1, b: 0, a: 0}
+    - _PlaneNormal: {r: 0.9928175, g: 0.11581802, b: -0.030004412, a: 0}
     - _PlaneNormal2: {r: 0, g: 0, b: 0, a: 0}
     - _PlaneNormal3: {r: 0, g: 0, b: 0, a: 0}
-    - _PlanePosition: {r: 0, g: 0, b: 0, a: 0}
+    - _PlanePosition: {r: -0.03555467, g: 0.81847835, b: 0.5134301, a: 0}
     - _PlanePosition2: {r: 0, g: 0, b: 0, a: 0}
     - _PlanePosition3: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []

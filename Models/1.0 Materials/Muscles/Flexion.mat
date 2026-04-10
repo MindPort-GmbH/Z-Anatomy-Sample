@@ -21,7 +21,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Flexion
-  m_Shader: {fileID: -6465566751694194690, guid: 21ed8786b23d7c941b40103f1430dfaa,
+  m_Shader: {fileID: -6465566751694194690, guid: 54db3774a15e4dfe8e228fcf31d9c468,
     type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -99,6 +99,8 @@ Material:
     - _RequireSplitLighting: 0
     - _Smoothness: 0.45
     - _SrcBlend: 1
+    - _StampClipSourceMask: 0
+    - _StampClipSourceMaskHigh: 0
     - _StencilRef: 0
     - _StencilRefDepth: 8
     - _StencilRefDistortionVec: 4

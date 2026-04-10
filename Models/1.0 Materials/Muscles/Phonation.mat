@@ -21,12 +21,13 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Phonation
-  m_Shader: {fileID: -6465566751694194690, guid: 21ed8786b23d7c941b40103f1430dfaa,
+  m_Shader: {fileID: -6465566751694194690, guid: 54db3774a15e4dfe8e228fcf31d9c468,
     type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _CLIPPING_PLANE
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -99,6 +100,8 @@ Material:
     - _RequireSplitLighting: 0
     - _Smoothness: 0.45
     - _SrcBlend: 1
+    - _StampClipSourceMask: 0
+    - _StampClipSourceMaskHigh: 0
     - _StencilRef: 0
     - _StencilRefDepth: 8
     - _StencilRefDistortionVec: 4
@@ -127,10 +130,10 @@ Material:
     - _BaseColor: {r: 0.9433962, g: 0.5784977, b: 0.4672481, a: 0}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 0}
-    - _PlaneNormal: {r: 0, g: 1, b: 0, a: 0}
+    - _PlaneNormal: {r: 0.9928175, g: 0.11581802, b: -0.030004412, a: 0}
     - _PlaneNormal2: {r: 0, g: 0, b: 0, a: 0}
     - _PlaneNormal3: {r: 0, g: 0, b: 0, a: 0}
-    - _PlanePosition: {r: 0, g: 0, b: 0, a: 0}
+    - _PlanePosition: {r: -0.03555467, g: 0.81847835, b: 0.5134301, a: 0}
     - _PlanePosition2: {r: 0, g: 0, b: 0, a: 0}
     - _PlanePosition3: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
