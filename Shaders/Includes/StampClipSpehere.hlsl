@@ -56,7 +56,6 @@ void StampClipSpehereClip_float(float3 worldPosition, out float clipThreshold, o
     static const float kEdgeSoftnessWS = 0.0005;
 
     static const float kEdgeIntensity = 1.0;
-    static const float3 kEdgeColor = float3(0.85, 0.08, 0.06);
 
     // _BaseColor is authored in the Shader Graph and available as a uniform.
     tintedBaseColor = _BaseColor.rgb;
@@ -119,7 +118,9 @@ void StampClipSpehereClip_float(float3 worldPosition, out float clipThreshold, o
         edgeMask = max(edgeMask, outsideMask * ring);
     }
 
-    tintedBaseColor = lerp(tintedBaseColor, kEdgeColor, saturate(edgeMask * kEdgeIntensity));
+    float edgeEnable = step(0.5, _EnableEdgeColor);
+    tintedBaseColor = lerp(tintedBaseColor, _EdgeColor.rgb, saturate(edgeMask * kEdgeIntensity) * edgeEnable);
+
 }
 
 void StampClipSpehereClip_float(float3 worldPosition, out float clipThreshold)

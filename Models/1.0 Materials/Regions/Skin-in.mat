@@ -127,6 +127,7 @@ Material:
     - _DoubleSidedNormalMode: 2
     - _DstBlend: 0
     - _EnableBlendModePreserveSpecularLighting: 1
+    - _EnableEdgeColor: 1
     - _EnableFogOnTransparent: 1
     - _EnvironmentReflections: 1
     - _GlossMapScale: 1
@@ -187,11 +188,12 @@ Material:
     - _BaseColor: {r: 0.9339623, g: 0.5971968, b: 0.4969384, a: 1}
     - _Color: {r: 1, g: 0, b: 0, a: 1}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
+    - _EdgeColor: {r: 0.85, g: 0.079999976, b: 0.059999965, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _PlaneNormal: {r: 0.9928175, g: 0.11581802, b: -0.030004412, a: 0}
+    - _PlaneNormal: {r: 0.9947879, g: -0.010648768, b: -0.1014117, a: 0}
     - _PlaneNormal2: {r: 0, g: 0, b: 0, a: 0}
     - _PlaneNormal3: {r: 0, g: 0, b: 0, a: 0}
-    - _PlanePosition: {r: -0.03555467, g: 0.81847835, b: 0.5134301, a: 0}
+    - _PlanePosition: {r: -0.22635831, g: 0.9658311, b: 0.5203903, a: 0}
     - _PlanePosition2: {r: 0, g: 0, b: 0, a: 0}
     - _PlanePosition3: {r: 0, g: 0, b: 0, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}

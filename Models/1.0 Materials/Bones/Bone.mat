@@ -21,13 +21,12 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Bone
-  m_Shader: {fileID: -6465566751694194690, guid: 21ed8786b23d7c941b40103f1430dfaa,
+  m_Shader: {fileID: -6465566751694194690, guid: 01f6fc5b6f43a2c428e1ef1bf94d6676,
     type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords:
-  - _EMISSION
+  m_InvalidKeywords: []
   m_LightmapFlags: 2
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -140,6 +139,7 @@ Material:
     - _DoubleSidedNormalMode: 2
     - _DstBlend: 0
     - _EnableBlendModePreserveSpecularLighting: 1
+    - _EnableEdgeColor: 0
     - _EnableFogOnTransparent: 1
     - _EnvironmentReflections: 1
     - _GlossMapScale: 1
@@ -166,6 +166,8 @@ Material:
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
+    - _StampClipSourceMask: 0
+    - _StampClipSourceMaskHigh: 0
     - _StencilRef: 0
     - _StencilRefDepth: 8
     - _StencilRefDistortionVec: 4
@@ -198,6 +200,7 @@ Material:
     - _BaseColor: {r: 0.9528302, g: 0.9528302, b: 0.9528302, a: 1}
     - _Color: {r: 1, g: 0, b: 0, a: 1}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
+    - _EdgeColor: {r: 0.8509804, g: 0.078431375, b: 0.05882353, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _PlaneNormal: {r: 0, g: 1, b: 0, a: 0}
     - _PlaneNormal2: {r: 0, g: 0, b: 0, a: 0}
