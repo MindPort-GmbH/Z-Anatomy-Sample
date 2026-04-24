@@ -21,7 +21,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Artery
-  m_Shader: {fileID: -6465566751694194690, guid: 54db3774a15e4dfe8e228fcf31d9c468,
+  m_Shader: {fileID: -6465566751694194690, guid: 01f6fc5b6f43a2c428e1ef1bf94d6676,
     type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -166,6 +166,8 @@ Material:
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
+    - _StampClipSourceMask: 0
+    - _StampClipSourceMaskHigh: 0
     - _StencilRef: 0
     - _StencilRefDepth: 8
     - _StencilRefDistortionVec: 4
@@ -205,10 +207,10 @@ Material:
     - _Color: {r: 1, g: 0, b: 0, a: 1}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _PlaneNormal: {r: 0.9928175, g: 0.11581802, b: -0.030004412, a: 0}
+    - _PlaneNormal: {r: 0.9947879, g: -0.010648768, b: -0.1014117, a: 0}
     - _PlaneNormal2: {r: 0, g: 0, b: 0, a: 0}
     - _PlaneNormal3: {r: 0, g: 0, b: 0, a: 0}
-    - _PlanePosition: {r: -0.03555467, g: 0.81847835, b: 0.5134301, a: 0}
+    - _PlanePosition: {r: -0.2325673, g: 0.9624818, b: 0.48819977, a: 0}
     - _PlanePosition2: {r: 0, g: 0, b: 0, a: 0}
     - _PlanePosition3: {r: 0, g: 0, b: 0, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
