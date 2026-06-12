@@ -21,7 +21,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Nerve 2
-  m_Shader: {fileID: -6465566751694194690, guid: 54db3774a15e4dfe8e228fcf31d9c468,
+  m_Shader: {fileID: -6465566751694194690, guid: 01f6fc5b6f43a2c428e1ef1bf94d6676,
     type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -140,6 +140,7 @@ Material:
     - _DoubleSidedNormalMode: 2
     - _DstBlend: 0
     - _EnableBlendModePreserveSpecularLighting: 1
+    - _EnableEdgeColor: 0
     - _EnableFogOnTransparent: 1
     - _EnvironmentReflections: 1
     - _GlossMapScale: 1
@@ -166,6 +167,8 @@ Material:
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
+    - _StampClipSourceMask: 0
+    - _StampClipSourceMaskHigh: 0
     - _StencilRef: 0
     - _StencilRefDepth: 8
     - _StencilRefDistortionVec: 4
@@ -199,11 +202,12 @@ Material:
     - _BaseColor: {r: 1, g: 1, b: 0.8254717, a: 1}
     - _Color: {r: 1, g: 0, b: 0, a: 1}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
+    - _EdgeColor: {r: 0.85, g: 0.079999976, b: 0.059999965, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _PlaneNormal: {r: 0.9947879, g: 0.032668367, b: -0.09659484, a: 0}
+    - _PlaneNormal: {r: 1, g: 0.00000035762787, b: -0.000000059604645, a: 0}
     - _PlaneNormal2: {r: 0, g: 0, b: 0, a: 0}
     - _PlaneNormal3: {r: 0, g: 0, b: 0, a: 0}
-    - _PlanePosition: {r: 0.29224446, g: 0.8913912, b: 0.12250696, a: 0}
+    - _PlanePosition: {r: 0.08999987, g: 0.96399945, b: 0.19000004, a: 0}
     - _PlanePosition2: {r: 0, g: 0, b: 0, a: 0}
     - _PlanePosition3: {r: 0, g: 0, b: 0, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
