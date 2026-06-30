@@ -26,7 +26,8 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _CLIPPING_PLANE
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -139,7 +140,7 @@ Material:
     - _DoubleSidedNormalMode: 2
     - _DstBlend: 0
     - _EnableBlendModePreserveSpecularLighting: 1
-    - _EnableEdgeColor: 1
+    - _EnableEdgeColor: 0
     - _EnableFogOnTransparent: 1
     - _EnvironmentReflections: 1
     - _GlossMapScale: 1
@@ -201,12 +202,12 @@ Material:
     - _BaseColor: {r: 0.8726415, g: 0.9363208, b: 1, a: 0.4392157}
     - _Color: {r: 1, g: 0, b: 0, a: 1}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
-    - _EdgeColor: {r: 0.8745098, g: 0.9372549, b: 1, a: 1}
+    - _EdgeColor: {r: 0.8509804, g: 0.078431375, b: 0.05882353, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _PlaneNormal: {r: 1, g: -0, b: -0, a: 0}
+    - _PlaneNormal: {r: 1, g: 0.00000035762787, b: -0.000000059604645, a: 0}
     - _PlaneNormal2: {r: 0, g: 0, b: 0, a: 0}
     - _PlaneNormal3: {r: 0, g: 0, b: 0, a: 0}
-    - _PlanePosition: {r: 0.09, g: 0.964, b: 0.19, a: 0}
+    - _PlanePosition: {r: -0.060000136, g: 0.96399945, b: 0.38300005, a: 0}
     - _PlanePosition2: {r: 0, g: 0, b: 0, a: 0}
     - _PlanePosition3: {r: 0, g: 0, b: 0, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
